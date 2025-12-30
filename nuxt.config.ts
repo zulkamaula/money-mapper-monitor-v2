@@ -3,6 +3,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-07-15',
   devtools: { enabled: true },
   modules: ['@clerk/nuxt'],
+  nitro: {
+    preset: 'netlify'
+  },
   css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   app: {
     head: {
