@@ -219,7 +219,7 @@ Private - All rights reserved
 
 ## 👤 Author
 
-**Zulkaris Kimauladi**
+**Zulkariski .M**
 - GitHub: [@zulkamaula](https://github.com/zulkamaula)
 
 ## 🙏 Acknowledgments
