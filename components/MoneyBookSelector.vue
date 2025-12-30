@@ -25,27 +25,18 @@ const editingBookName = ref('')
 const showSelector = ref(props.books.length > 0)
 const showCreateDialog = ref(false)
 
-// Internal loading state - prevents empty state flash on first load
+// Track initialization to prevent empty state flash
 const isInitialized = ref(false)
-const internalLoading = ref(false)
-
 const hasBooks = computed(() => props.books.length > 0)
-const shouldShowLoading = computed(() => {
-  // Show loading if external loading prop is true OR not yet initialized
-  return props.loading || (!isInitialized.value && !hasBooks.value)
-})
 
-// Watch books to mark as initialized when data arrives
-watch(() => props.books, (books) => {
-  if (books.length > 0 || props.loading === false) {
-    isInitialized.value = true
-  }
-}, { immediate: true })
+// Mark as initialized when books data changes (after first fetch)
+watch(() => props.books, () => {
+  isInitialized.value = true
+}) // No immediate: true - only trigger when props actually change
 
 // Cleanup
 onUnmounted(() => {
   isInitialized.value = false
-  internalLoading.value = false
 })
 
 function handleCreate() {
@@ -93,7 +84,7 @@ function handleDelete(book: MoneyBook, event?: Event) {
 <template>
   <div class="money-book-selector">
     <!-- Loading Skeleton -->
-    <VCard v-if="shouldShowLoading" class="selector-card" elevation="0">
+    <VCard v-if="!isInitialized" class="selector-card" elevation="0">
       <VCardText class="pa-5">
         <VSkeletonLoader type="chip" class="mb-3" />
         <VSkeletonLoader type="list-item-two-line" />
@@ -101,17 +92,19 @@ function handleDelete(book: MoneyBook, event?: Event) {
     </VCard>
 
     <!-- Empty State -->
-    <div v-else-if="!hasBooks && isInitialized" class="empty-state-container">
-      <VIcon icon="mdi-book-open-variant" size="80" color="grey-darken-1" class="mb-4" />
-      <div class="text-left">
-        <div class="text-h6 text-grey-darken-1">No Money Books Yet</div>
-        <VBtn color="white" variant="flat" size="small" rounded="pill" @click="openCreateDialog"
-          class="mt-2 text-capitalize">
-          <VIcon icon="mdi-plus" start />
-          Create Your First One
-        </VBtn>
-      </div>
-    </div>
+     <template v-else-if="!hasBooks && isInitialized">
+         <div class="empty-state-container">
+           <VIcon icon="mdi-book-open-variant" size="80" color="grey-darken-1" class="mb-4" />
+           <div class="text-left">
+             <div class="text-h6 text-grey-darken-1">No Money Books Yet</div>
+             <VBtn color="white" variant="flat" size="small" rounded="pill" @click="openCreateDialog"
+               class="mt-2 text-capitalize">
+               <VIcon icon="mdi-plus" start />
+               Create Your First One
+             </VBtn>
+           </div>
+         </div>
+     </template>
 
     <!-- Selector Card with Books Data -->
     <template v-else-if="hasBooks">
@@ -355,26 +348,20 @@ function handleDelete(book: MoneyBook, event?: Event) {
   background: white;
 }
 
-/* Slide Down Animation */
+/* Slide Down Animation - simplified to prevent layout shift */
 .slide-down-enter-active {
-  animation: slideDown 0.4s ease-out;
+  transition: opacity 0.3s ease-out;
 }
 
 .slide-down-leave-active {
-  animation: slideDown 0.3s ease-in reverse;
+  transition: opacity 0.2s ease-in;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-    max-height: 0;
-  }
+.slide-down-enter-from {
+  opacity: 0;
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    max-height: 500px;
-  }
+.slide-down-leave-to {
+  opacity: 0;
 }
 </style>

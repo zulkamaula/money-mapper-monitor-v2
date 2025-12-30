@@ -133,10 +133,10 @@ function resetForm() {
             <VListItem v-for="preview in previewAllocation" :key="preview.pocket.id" class="preview-item">
               <VListItemTitle class="d-flex flex-wrap justify-space-between">
                 <div class="preview-pocket">
-                  <span class="preview-name text-wrap">{{ preview.pocket.name }}</span>
-                  <VChip size="x-small" variant="flat" color="primary">
+                <VChip size="x-small" variant="flat" color="primary">
                     {{ formatPercentage(preview.pocket.percentage) }}
-                  </VChip>
+                </VChip>
+                  <span class="preview-name text-wrap w-100 w-sm-auto">{{ preview.pocket.name }}</span>
                 </div>
                 <span class="preview-amount">{{ formatCurrency(preview.amount) }}</span>
               </VListItemTitle>

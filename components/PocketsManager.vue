@@ -21,7 +21,7 @@ const showDialog = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const editingPocketId = ref<string | null>(null)
 const pocketData = ref({ name: '', percentage: 0 })
-const isExpanded = ref(true)
+const isExpanded = ref(false)
 
 const totalPercentage = computed(() => {
   return props.pockets.reduce((sum, p) => sum + p.percentage, 0)
@@ -126,13 +126,15 @@ function handleDelete(pocketId: string) {
 
     <!-- Shared Content: Desktop always visible, Mobile collapsible -->
     <Transition name="expand">
-      <VCardText v-show="isExpanded" class="pa-6 pockets-content">
-        <!-- Add New Button -->
-        <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="mb-4 text-none"
-          @click="openDialog">
-          <VIcon icon="mdi-plus" start />
-          Add New Pocket
-        </VBtn>
+      <VCardText v-show="isExpanded" class="px-6 pb-6 pt-0 pockets-content">
+        <!-- Add New Button - Sticky -->
+        <div class="add-button-sticky">
+          <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="mb-4 text-none"
+            @click="openDialog">
+            <VIcon icon="mdi-plus" start />
+            Add New Pocket
+          </VBtn>
+        </div>
 
         <div v-if="loading" class="py-4">
           <VSkeletonLoader type="list-item" v-for="i in 3" :key="i" class="mb-2" />
@@ -150,10 +152,10 @@ function handleDelete(pocketId: string) {
           <VListItem v-for="pocket in pockets" :key="pocket.id" class="pocket-item mb-2">
             <VListItemTitle class="d-flex align-center justify-space-between">
               <div class="pocket-actions">
-                <span class="pocket-name text-wrap">{{ pocket.name }}</span>
-                <VChip color="primary" size="x-small" variant="flat" class="mr-2 ml-1">
-                  {{ formatPercentage(pocket.percentage) }}
+                <VChip color="primary" size="x-small" variant="flat">
+                {{ formatPercentage(pocket.percentage) }}
                 </VChip>
+                <span class="pocket-name text-wrap w-100 w-sm-auto">{{ pocket.name }}</span>
               </div>
               <VMenu location="bottom end" :offset="[-8, -12]" scroll-strategy="close">
                 <template v-slot:activator="{ props }">
@@ -241,22 +243,43 @@ function handleDelete(pocketId: string) {
 .pockets-content {
   flex: 1;
   overflow-y: auto;
-  max-height: 500px;
+  position: relative;
 }
 
-/* Mobile: Collapsible content */
+.add-button-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding-bottom: 8px;
+  margin: -24px -24px 8px -24px;
+  padding: 16px 24px 8px 24px;
+}
+
+/* Mobile: Collapsible content with max-height and smaller text */
 @media (max-width: 959px) {
   .pockets-content {
     transition: all 0.3s ease;
+    max-height: 400px;
+    font-size: 0.875rem;
+  }
+
+  .pocket-name {
+    font-size: 0.875rem;
+  }
+
+  .pocket-item {
+    padding: 8px 12px !important;
   }
 }
 
-/* Desktop: Always show content, override v-show */
+/* Desktop: Always show content with fixed height for scrolling */
 @media (min-width: 960px) {
   .pockets-content {
     display: block !important;
     opacity: 1 !important;
-    max-height: none !important;
+    max-height: 400px;
   }
 }
 
@@ -280,6 +303,7 @@ function handleDelete(pocketId: string) {
 
 .pocket-list {
   background: transparent !important;
+  margin-top: 20px;
 }
 
 .pocket-item {
@@ -307,7 +331,7 @@ function handleDelete(pocketId: string) {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .empty-state {

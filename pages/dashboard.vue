@@ -346,9 +346,9 @@ async function handleDeleteAllocation(id: string) {
       </VRow>
 
       <!-- Bottom Row: Pockets + Allocations -->
-      <VRow v-if="selectedBook">
+      <VRow v-if="selectedBook" class="dashboard-content-row">
         <!-- Pockets Manager (Left) -->
-        <VCol cols="12" md="4">
+        <VCol cols="12" sm="12" md="4" class="dashboard-col">
           <PocketsManager
             :pockets="pockets"
             :loading="loadingPockets"
@@ -359,7 +359,7 @@ async function handleDeleteAllocation(id: string) {
         </VCol>
 
         <!-- Allocations History (Right) -->
-        <VCol cols="12" md="8">
+        <VCol cols="12" sm="12" md="8" class="dashboard-col">
           <AllocationsHistory
             :allocations="allocations"
             :pockets="pockets"
@@ -413,10 +413,49 @@ async function handleDeleteAllocation(id: string) {
 }
 
 /* Responsive */
-@media (max-width: 960px) {
+/* Extra small screens - flex column with optimized spacing */
+@media (max-width: 599px) {
+  .dashboard-main {
+    padding-top: 16px;
+    padding-bottom: 70px;
+  }
+
+  .dashboard-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .dashboard-content-row {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-col {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Small to medium screens */
+@media (min-width: 600px) and (max-width: 959px) {
   .dashboard-main {
     padding-top: 20px;
     padding-bottom: 70px;
+  }
+
+  .dashboard-content-row {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* Medium screens and up - default grid layout */
+@media (min-width: 960px) {
+  .dashboard-content-row {
+    display: flex;
+    flex-direction: row;
   }
 }
 </style>

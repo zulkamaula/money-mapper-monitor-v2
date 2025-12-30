@@ -14,6 +14,7 @@ export function formatCurrency(amount: number): string {
  * - 10.5 → "10.5%"
  * - 10.25 → "10.25%"
  * - 10.00 → "10%"
+ * - 10.009 → "10%" (rounds to whole number)
  */
 export function formatPercentage(value: number | string): string {
   // Convert to number if string (database might return NUMERIC as string)
@@ -22,7 +23,13 @@ export function formatPercentage(value: number | string): string {
   // Handle invalid values
   if (isNaN(num)) return '0%'
   
-  // Remove trailing zeros by converting to number
+  // Round to whole number if very close (handles floating point precision)
+  const rounded = Math.round(num)
+  if (Math.abs(num - rounded) < 0.01) {
+    return `${rounded}%`
+  }
+  
+  // Otherwise, show up to 2 decimals, removing trailing zeros
   const formatted = parseFloat(num.toFixed(2))
   return `${formatted}%`
 }

@@ -82,13 +82,15 @@ function handleDelete(id: string) {
 
     <!-- Shared Content: Desktop always visible, Mobile collapsible -->
     <Transition name="expand-card">
-      <VCardText v-show="isExpanded" class="pa-6 allocations-content">
-        <!-- Add New Button -->
-        <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="mb-4 text-none"
-          @click="handleCreate">
-          <VIcon icon="mdi-plus" start />
-          Add New Allocation
-        </VBtn>
+      <VCardText v-show="isExpanded" class="px-6 pb-6 pt-0 allocations-content">
+        <!-- Add New Button - Sticky -->
+        <div class="add-button-sticky">
+          <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="mb-4 text-none"
+            @click="handleCreate">
+            <VIcon icon="mdi-plus" start />
+            Add New Allocation
+          </VBtn>
+        </div>
 
         <div v-if="loading" class="py-4">
           <VSkeletonLoader type="article" v-for="i in 3" :key="i" class="mb-3" />
@@ -116,9 +118,9 @@ function handleDelete(id: string) {
                   <div class="details-list">
                     <div v-for="item in allocation.allocation_items" :key="item.id" class="detail-item">
                       <div class="detail-info">
-                        <div class="detail-name text-wrap">{{ item.pocket_name }}</div>
                         <div class="detail-percentage rounded-pill">{{ formatPercentage(item.pocket_percentage) }}
                         </div>
+                        <div class="detail-name text-wrap w-100 w-sm-auto">{{ item.pocket_name }}</div>
                       </div>
                       <div class="detail-amount-group">
                         <div class="detail-amount">{{ formatCurrency(item.amount) }}</div>
@@ -179,24 +181,53 @@ function handleDelete(id: string) {
 }
 
 .allocations-content {
-  max-height: 400px;
   overflow-y: auto;
   flex: 1;
+  position: relative;
 }
 
-/* Mobile: Collapsible content */
+.add-button-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding-bottom: 8px;
+  margin: -24px -24px 8px -24px;
+  padding: 16px 24px 8px 24px;
+}
+
+/* Mobile: Collapsible content with max-height and smaller text */
 @media (max-width: 959px) {
   .allocations-content {
     transition: all 0.3s ease;
+    max-height: 400px;
+    font-size: 0.875rem;
+  }
+
+  .allocation-item {
+    padding: 12px !important;
+  }
+
+  .allocation-amount {
+    font-size: 1rem;
+  }
+
+  .detail-name {
+    font-size: 0.875rem;
+  }
+
+  .detail-amount {
+    font-size: 0.875rem;
   }
 }
 
-/* Desktop: Always show content, override v-show */
+/* Desktop: Always show content with fixed height for scrolling */
 @media (min-width: 960px) {
   .allocations-content {
     display: block !important;
     opacity: 1 !important;
-    max-height: none !important;
+    max-height: 400px;
   }
 }
 
@@ -219,6 +250,7 @@ function handleDelete(id: string) {
 }
 
 .allocation-list {
+    margin-top: 20px;
   background: transparent !important;
 }
 
@@ -308,6 +340,8 @@ function handleDelete(id: string) {
 .detail-amount-group {
   display: flex;
   align-items: center;
+  justify-content: end;
+  flex-grow: 1;
   gap: 8px;
 }
 
