@@ -7,6 +7,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[functions]
+  # Explicit path untuk Nitro functions
+  directory = ".netlify/functions-internal"
+
 # REDIRECTS: CDN untuk aset, Functions untuk SSR
 # Order matters! Spesifik dulu, umum terakhir.
 
