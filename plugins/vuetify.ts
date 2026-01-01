@@ -1,14 +1,74 @@
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
+
+// Import only used components for tree-shaking
+import {
+  VApp,
+  VAppBar,
+  VAvatar,
+  VBtn,
+  VCard,
+  VCardActions,
+  VCardText,
+  VCardTitle,
+  VChip,
+  VCol,
+  VContainer,
+  VDialog,
+  VDivider,
+  VFooter,
+  VIcon,
+  VImg,
+  VList,
+  VListItem,
+  VListItemTitle,
+  VMain,
+  VMenu,
+  VProgressCircular,
+  VRow,
+  VSkeletonLoader,
+  VSpacer,
+  VTextField,
+} from 'vuetify/components'
+
+// Import only used directives
+import { Ripple } from 'vuetify/directives'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
     ssr: true,
-    components,
-    directives,
+    components: {
+      VApp,
+      VAppBar,
+      VAvatar,
+      VBtn,
+      VCard,
+      VCardActions,
+      VCardText,
+      VCardTitle,
+      VChip,
+      VCol,
+      VContainer,
+      VDialog,
+      VDivider,
+      VFooter,
+      VIcon,
+      VImg,
+      VList,
+      VListItem,
+      VListItemTitle,
+      VMain,
+      VMenu,
+      VProgressCircular,
+      VRow,
+      VSkeletonLoader,
+      VSpacer,
+      VTextField,
+    },
+    directives: {
+      Ripple,
+    },
     theme: {
       defaultTheme: 'light',
       themes: {
