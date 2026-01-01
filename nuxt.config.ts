@@ -6,6 +6,9 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'netlify'
   },
+  experimental: {
+    payloadExtraction: false
+  },
   css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   app: {
     head: {

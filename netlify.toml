@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm run build && cp -r node_modules/.cache/nuxt/.nuxt/dist/client/* .netlify/functions-internal/server/client/ || mkdir -p .netlify/functions-internal/server/client && cp -r node_modules/.cache/nuxt/.nuxt/dist/client/* .netlify/functions-internal/server/client/"
 
 [build.environment]
   NODE_VERSION = "20"
