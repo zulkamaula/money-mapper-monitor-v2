@@ -5,7 +5,7 @@ definePageMeta({
 </script>
 
 <template>
-  <LegalDocument title="Terms of Service" last-updated="December 10, 2025">
+  <LazyLegalDocument title="Terms of Service" last-updated="December 10, 2025">
     <h2>Agreement to Terms</h2>
     <p>
       By accessing and using M3 App (Money Mapper Monitor), you accept and agree to be bound by the terms and
@@ -201,5 +201,5 @@ definePageMeta({
       App
       regarding the use of the service.
     </p>
-  </LegalDocument>
+  </LazyLegalDocument>
 </template>

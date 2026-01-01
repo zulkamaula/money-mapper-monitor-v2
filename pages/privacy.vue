@@ -5,7 +5,7 @@ definePageMeta({
 </script>
 
 <template>
-  <LegalDocument title="Privacy Policy" last-updated="December 10, 2025">
+  <LazyLegalDocument title="Privacy Policy" last-updated="December 10, 2025">
     <h2>Introduction</h2>
     <p>
       Welcome to M3 App (Money Mapper Monitor). We respect your privacy and are committed to protecting your
@@ -122,5 +122,5 @@ definePageMeta({
     <p>
       <strong>Email:</strong> <a href="mailto:support@m3app.com">support@m3app.com</a>
     </p>
-  </LegalDocument>
+  </LazyLegalDocument>
 </template>

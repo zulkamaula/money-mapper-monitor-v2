@@ -329,10 +329,10 @@ async function handleDeleteAllocation(id: string) {
 <template>
   <div class="dashboard-main">
     <VContainer fluid class="dashboard-container px-6">
-      <!-- Money Book Selector -->
+      <!-- Money Book Selector (Lazy loaded) -->
       <VRow class="mb-6" justify="center">
         <VCol cols="12">
-          <MoneyBookSelector
+          <LazyMoneyBookSelector
             :books="moneyBooks"
             :selected-book="selectedBook"
             :loading="loading"
@@ -347,9 +347,9 @@ async function handleDeleteAllocation(id: string) {
 
       <!-- Bottom Row: Pockets + Allocations -->
       <VRow v-if="selectedBook" class="dashboard-content-row">
-        <!-- Pockets Manager (Left) -->
+        <!-- Pockets Manager (Left, Lazy loaded) -->
         <VCol cols="12" sm="12" md="4" class="dashboard-col">
-          <PocketsManager
+          <LazyPocketsManager
             :pockets="pockets"
             :loading="loadingPockets"
             @create="handleCreatePocket"
@@ -358,9 +358,9 @@ async function handleDeleteAllocation(id: string) {
           />
         </VCol>
 
-        <!-- Allocations History (Right) -->
+        <!-- Allocations History (Right, Lazy loaded) -->
         <VCol cols="12" sm="12" md="8" class="dashboard-col">
-          <AllocationsHistory
+          <LazyAllocationsHistory
             :allocations="allocations"
             :pockets="pockets"
             :loading="loadingAllocations"
@@ -371,8 +371,8 @@ async function handleDeleteAllocation(id: string) {
       </VRow>
     </VContainer>
 
-    <!-- Allocation Dialog -->
-    <AllocationDialog
+    <!-- Allocation Dialog (Lazy loaded) -->
+    <LazyAllocationDialog
       v-model="showAllocationDialog"
       :pockets="pockets"
       @save="handleCreateAllocation"
