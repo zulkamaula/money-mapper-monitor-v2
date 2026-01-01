@@ -4,7 +4,14 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@clerk/nuxt'],
   nitro: {
-    preset: 'netlify'
+    preset: 'netlify',
+    publicAssets: [
+      {
+        baseURL: '/',
+        dir: 'public',
+        maxAge: 60 * 60 * 24 * 365 // 1 year
+      }
+    ]
   },
   css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   app: {
