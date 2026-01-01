@@ -24,10 +24,10 @@ const pocketData = ref({ name: '', percentage: 0 })
 const isExpanded = ref(false)
 
 const totalPercentage = computed(() => {
-  const total = props.pockets.reduce((sum, p) => sum + p.percentage, 0)
-  console.log('🔍 DEBUG - Pockets:', props.pockets.map(p => ({ name: p.name, percentage: p.percentage, type: typeof p.percentage })))
-  console.log('🔍 DEBUG - Total percentage:', total, 'Type:', typeof total)
-  return total
+  return props.pockets.reduce((sum, p) => {
+    const percentage = typeof p.percentage === 'string' ? parseFloat(p.percentage) : p.percentage
+    return sum + percentage
+  }, 0)
 })
 
 const percentageColor = computed(() => {
@@ -44,7 +44,11 @@ function toggleExpand() {
 const canAddPocket = computed(() => {
   // For edit mode, exclude the current pocket's percentage
   const currentTotal = dialogMode.value === 'edit' && editingPocketId.value
-    ? totalPercentage.value - (props.pockets.find(p => p.id === editingPocketId.value)?.percentage || 0)
+    ? (() => {
+        const pocket = props.pockets.find(p => p.id === editingPocketId.value)
+        const pocketPercentage = pocket ? (typeof pocket.percentage === 'string' ? parseFloat(pocket.percentage) : pocket.percentage) : 0
+        return totalPercentage.value - pocketPercentage
+      })()
     : totalPercentage.value
   const wouldBeTotal = currentTotal + pocketData.value.percentage
   return wouldBeTotal <= 100.01
@@ -52,7 +56,11 @@ const canAddPocket = computed(() => {
 
 const remainingPercentage = computed(() => {
   const currentTotal = dialogMode.value === 'edit' && editingPocketId.value
-    ? totalPercentage.value - (props.pockets.find(p => p.id === editingPocketId.value)?.percentage || 0)
+    ? (() => {
+        const pocket = props.pockets.find(p => p.id === editingPocketId.value)
+        const pocketPercentage = pocket ? (typeof pocket.percentage === 'string' ? parseFloat(pocket.percentage) : pocket.percentage) : 0
+        return totalPercentage.value - pocketPercentage
+      })()
     : totalPercentage.value
   return 100 - currentTotal - (pocketData.value.percentage || 0)
 })
