@@ -24,7 +24,10 @@ const pocketData = ref({ name: '', percentage: 0 })
 const isExpanded = ref(false)
 
 const totalPercentage = computed(() => {
-  return props.pockets.reduce((sum, p) => sum + p.percentage, 0)
+  const total = props.pockets.reduce((sum, p) => sum + p.percentage, 0)
+  console.log('🔍 DEBUG - Pockets:', props.pockets.map(p => ({ name: p.name, percentage: p.percentage, type: typeof p.percentage })))
+  console.log('🔍 DEBUG - Total percentage:', total, 'Type:', typeof total)
+  return total
 })
 
 const percentageColor = computed(() => {
