@@ -7,35 +7,6 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# REDIRECTS: CDN untuk aset, Functions untuk SSR
-# Order matters! Spesifik dulu, umum terakhir.
-
-# 1) Aset client Nuxt (/_nuxt/*) → CDN langsung (SKIP function)
-#    Netlify akan serve dari .output/public/_nuxt/ otomatis.
-#    Redirect ini opsional (Netlify smart enough), tapi eksplisit lebih aman.
-[[redirects]]
-  from = "/_nuxt/*"
-  to = "/_nuxt/:splat"
-  status = 200
-  force = false
-  # force=false artinya: kalau file ada di publish dir, serve langsung (tidak lewat function)
-
-# 2) File statis di /public (favicon, robots, dll) → CDN langsung
-#    Sudah otomatis karena ada di .output/public/ root.
-#    Tidak perlu redirect eksplisit kecuali ada edge case.
-
-# 3) API routes → Nitro SSR function
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/server"
-  status = 200
-
-# 4) Semua route lain (/, /dashboard, dll) → Nitro SSR function
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server"
-  status = 200
-
 # Security headers (opsional)
 [[headers]]
   for = "/*"

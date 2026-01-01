@@ -1,9 +1,0 @@
-# Netlify Redirects - Override Nitro empty file
-# Aset client dari CDN (bukan function)
-/_nuxt/*  /_nuxt/:splat  200
-
-# API routes ke function
-/api/*  /.netlify/functions/server  200
-
-# Semua route lain ke SSR function
-/*  /.netlify/functions/server  200
