@@ -1,0 +1,8 @@
+# Ignore database files and migration scripts
+server/db/*.sql
+server/db/*.js
+
+# Ignore development files
+*.log
+.env
+.env.*
