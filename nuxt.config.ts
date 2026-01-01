@@ -4,8 +4,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@clerk/nuxt'],
   nitro: {
-    preset: 'netlify',
-    serveStatic: true
+    preset: 'netlify'
   },
   css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   app: {
