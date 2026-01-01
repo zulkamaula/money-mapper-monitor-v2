@@ -5,13 +5,10 @@ export default defineNuxtConfig({
   modules: ['@clerk/nuxt'],
   nitro: {
     preset: 'netlify',
-    publicAssets: [
-      {
-        baseURL: '/',
-        dir: 'public',
-        maxAge: 60 * 60 * 24 * 365 // 1 year
-      }
-    ]
+    output: {
+      dir: '.netlify',
+      publicDir: '.output/public'
+    }
   },
   css: ['vuetify/styles', '@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   app: {
