@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: {
-        lang: 'id'
+        lang: 'en'
       },
       title: 'M3 App - Money Mapper Monitor',
       titleTemplate: '%s | M3 App',
@@ -25,11 +25,11 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { 
           name: 'description', 
-          content: 'M3 App (Money Mapper Monitor) - Smart Envelope System untuk manajemen keuangan pribadi dengan real-time tracking. Kelola budget Anda dengan mudah dan efisien.'
+          content: 'M3 App (Money Mapper Monitor) - Simple envelope budgeting system for personal finance management. Allocate your budget into custom pockets and track your spending with clarity.'
         },
         { 
           name: 'keywords', 
-          content: 'money management, envelope system, finance tracker, budgeting, personal finance, manajemen keuangan, budget tracker, money mapper'
+          content: 'money management, envelope system, finance tracker, budgeting, personal finance, budget tracker, money mapper, envelope budgeting, manajemen keuangan, sistem amplop, pencatat keuangan, budget pribadi, pengatur budget, pengelola uang'
         },
         { name: 'author', content: 'M3 App Team' },
         { name: 'theme-color', content: '#0F766E' },
@@ -40,20 +40,21 @@ export default defineNuxtConfig({
         { property: 'og:title', content: 'M3 App - Money Mapper Monitor' },
         { 
           property: 'og:description', 
-          content: 'Smart Envelope System untuk manajemen keuangan pribadi dengan real-time tracking'
+          content: 'Simple envelope budgeting system for personal finance. Allocate your budget into custom pockets and track spending easily.'
         },
         { property: 'og:url', content: 'https://m3-app.netlify.app' },
         { property: 'og:image', content: 'https://m3-app.netlify.app/icon-m3-transparent.webp' },
         { property: 'og:image:width', content: '512' },
         { property: 'og:image:height', content: '512' },
         { property: 'og:locale', content: 'id_ID' },
+        { property: 'og:locale:alternate', content: 'en_US' },
         
         // Twitter Card
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'M3 App - Money Mapper Monitor' },
         { 
           name: 'twitter:description', 
-          content: 'Smart Envelope System untuk manajemen keuangan pribadi'
+          content: 'Simple envelope budgeting for personal finance. Allocate budget into pockets and track spending easily.'
         },
         { name: 'twitter:image', content: 'https://m3-app.netlify.app/icon-m3-transparent.webp' },
         
