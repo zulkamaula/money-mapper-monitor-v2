@@ -1,9 +1,33 @@
+# netlify.toml
 [build]
-  command = "npm run build && cp -r node_modules/.cache/nuxt/.nuxt/dist/client/* .netlify/functions-internal/server/client/ || mkdir -p .netlify/functions-internal/server/client && cp -r node_modules/.cache/nuxt/.nuxt/dist/client/* .netlify/functions-internal/server/client/"
+  command = "npm run build"
+  # Untuk Nuxt 4, client bundle ada di .nuxt/dist/client
+  publish = ".nuxt/dist/client"
 
 [build.environment]
   NODE_VERSION = "20"
 
+# SSR via Functions, tapi jangan override static assets
+# 1) Aset client Nuxt (served by CDN)
+[[redirects]]
+  from = "/_nuxt/*"
+  to = "/_nuxt/:splat"
+  status = 200
+
+# 2) File statis di /public (favicon, robots, icon-*.webp, dll)
+# Netlify otomatis melayani apapun yang ada di publish directory.
+# Kalau Anda punya file di /public root (bukan di client), pindahkan ke static yang dilayani CDN:
+# - Untuk Nuxt 4, taruh file public di root project /public
+# - Nuxt akan copy ke .nuxt/dist/client saat build (pastikan ada).
+# Jika sebagian tidak tercopy, tambahkan explicit headers/redirect jika perlu.
+
+# 3) Semua route lain masuk ke fungsi SSR Nitro
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
+
+# Security headers (opsional)
 [[headers]]
   for = "/*"
   [headers.values]
