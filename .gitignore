@@ -27,3 +27,13 @@ logs
 # Database files (sensitive)
 server/db/*.sql
 server/db/*.js
+
+# Internal documentation (keep private)
+CLERK_NEON_NETLIFY.md
+DEBUG_404_ASSETS.md
+DEPLOYMENT_CHECKLIST.md
+NITRO_NETLIFY_GUIDE.md
+QUICK_SUMMARY.md
+OPTIMIZATION_GUIDE.md
+SECURITY_FIX.md
+README-MIGRATION.md
