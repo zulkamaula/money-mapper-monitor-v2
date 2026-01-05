@@ -28,6 +28,7 @@ import {
   VProgressCircular,
   VRow,
   VSkeletonLoader,
+  VSnackbar,
   VSpacer,
   VTextField,
 } from 'vuetify/components'
@@ -63,6 +64,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       VProgressCircular,
       VRow,
       VSkeletonLoader,
+      VSnackbar,
       VSpacer,
       VTextField,
     },

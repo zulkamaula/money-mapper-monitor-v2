@@ -30,7 +30,7 @@ const showCreateDialog = ref(false)
 const isInitialized = ref(false)
 const hasBooks = computed(() => props.books.length > 0)
 
-// Drag and drop state
+// Drag and drop state (desktop only)
 const localBooks = ref<MoneyBook[]>([])
 const draggedIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
@@ -152,7 +152,7 @@ function onDragEnd() {
          <div class="empty-state-container">
            <VIcon icon="mdi-book-open-variant" size="80" color="grey-darken-1" class="mb-4" />
            <div class="text-left">
-             <div class="text-h6 text-grey-darken-1">No Money Books Yet</div>
+             <div class="text-body-1 text-sm-h6 text-grey-darken-1">No Money Books Yet</div>
              <VBtn color="white" variant="flat" size="small" rounded="pill" @click="openCreateDialog"
                class="mt-2 text-capitalize">
                <VIcon icon="mdi-plus" start />
@@ -208,11 +208,11 @@ function onDragEnd() {
                   <!-- Display Mode -->
                   <VChip v-else :color="selectedBook?.id === book.id ? 'primary' : 'grey'" @click="handleSelect(book)"
                     class="book-chip" :variant="selectedBook?.id === book.id ? 'flat' : 'outlined'">
-                    <VIcon icon="mdi-drag-horizontal-variant" size="small" class="drag-handle mr-1" />
+                    <VIcon icon="mdi-drag-vertical" size="small" class="drag-handle desktop-only mr-1" />
                     {{ book.name }}
-                    <VMenu class="border">
+                    <VMenu>
                       <template v-slot:activator="{ props }">
-                        <VBtn icon="mdi-menu-down" size="small" variant="plain" class="pa-0 h-auto w-auto ml-3 border"
+                        <VBtn icon="mdi-menu-down" size="small" variant="plain" class="pa-0 h-auto w-auto ml-3" :class="[selectedBook?.id === book.id ? 'border-active' : 'border-inactive']"
                           v-bind="props" @click.stop />
                       </template>
                       <VList density="compact">
@@ -264,6 +264,22 @@ function onDragEnd() {
 </template>
 
 <style scoped>
+:deep(.border-active) {
+  border: 1px solid rgba(var(--v-theme-surface), 0.3) !important;
+}
+
+:deep(.book-chip:hover .border-active) {
+  border: 1px solid rgb(var(--v-theme-surface)) !important;
+}
+
+:deep(.border-inactive) {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.3) !important;
+}
+
+:deep(.book-chip:hover .border-inactive) {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.7) !important;
+}
+
 .money-book-selector {
   height: 100%;
 }
@@ -433,6 +449,29 @@ function onDragEnd() {
 
 .book-item.dragging .drag-handle {
   cursor: grabbing;
+}
+
+/* Mobile: Hide drag functionality completely */
+@media (max-width: 768px) {
+  .drag-handle.desktop-only {
+    display: none;
+  }
+  
+  .books-scroll-container {
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .book-item {
+    touch-action: auto;
+    cursor: default;
+    pointer-events: auto;
+  }
+  
+  .book-item[draggable="true"] {
+    -webkit-user-drag: none;
+    user-select: auto;
+  }
 }
 
 .edit-input {

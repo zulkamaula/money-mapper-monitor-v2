@@ -108,7 +108,7 @@ function handleDelete(pocketId: string) {
     <VCardTitle class="card-header pa-5" @click="toggleExpand">
       <div class="header-content">
         <div class="title-section">
-          <div class="d-flex align-center">
+          <div class="d-flex align-center text-body-1 text-sm-h6">
             <VIcon icon="mdi-wallet-outline" class="mr-2" color="primary" />
             Pockets
           </div>
@@ -160,7 +160,7 @@ function handleDelete(pocketId: string) {
           </div>
         </div>
         <VList v-else class="pocket-list">
-          <VListItem v-for="pocket in pockets" :key="pocket.id" class="pocket-item mb-2">
+          <VListItem v-for="pocket in pockets" :key="pocket.id" class="pocket-item mb-3">
             <VListItemTitle class="d-flex align-center justify-space-between">
               <div class="pocket-actions">
                 <VChip color="primary" size="x-small" variant="flat">

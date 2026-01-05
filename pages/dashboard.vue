@@ -26,6 +26,17 @@ const creatingBook = ref(false)
 // Dialog state
 const showAllocationDialog = ref(false)
 
+// Notification state
+const snackbar = ref({
+  show: false,
+  message: '',
+  color: 'success'
+})
+
+function showNotification(message: string, color: 'success' | 'error' | 'info' = 'success') {
+  snackbar.value = { show: true, message, color }
+}
+
 // Watch for user authentication - reactive approach
 watch(
   () => user.value,
@@ -186,9 +197,10 @@ async function handleReorderBooks(reorderedBooks: MoneyBook[]) {
       body: { bookIds }
     })
 
-    console.log('Books reordered successfully')
+    showNotification('Book order updated successfully', 'success')
   } catch (error) {
     console.error('Failed to reorder books:', error)
+    showNotification('Failed to reorder books', 'error')
     // Reload books to restore correct order
     await loadMoneyBooks()
   }
@@ -402,6 +414,17 @@ async function handleDeleteAllocation(id: string) {
       :pockets="pockets"
       @save="handleCreateAllocation"
     />
+
+    <!-- Notification Snackbar -->
+    <VSnackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+      location="top"
+      rounded="pill"
+    >
+      {{ snackbar.message }}
+    </VSnackbar>
   </div>
 </template>
 

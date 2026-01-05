@@ -59,7 +59,7 @@ function handleDelete(id: string) {
     <VCardTitle class="card-header pa-5" @click="toggleCardExpand">
       <div class="header-content">
         <div class="title-section">
-          <div class="d-flex align-center text-wrap">
+          <div class="d-flex align-center text-wrap text-body-1 text-sm-h6">
             <VIcon icon="mdi-chart-arc" class="mr-2" color="success" />
             Recent Allocations
           </div>

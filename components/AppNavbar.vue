@@ -110,7 +110,7 @@ async function handleLogout() {
 }
 
 .brand-subtitle {
-  font-size: 11px;
+  font-size: .6rem;
   font-weight: 500;
   color: #0891b2;
   letter-spacing: 0.5px;
