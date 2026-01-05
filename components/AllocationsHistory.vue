@@ -85,7 +85,7 @@ function handleDelete(id: string) {
       <VCardText v-show="isExpanded" class="px-6 pb-6 pt-0 allocations-content">
         <!-- Add New Button - Sticky -->
         <div class="add-button-sticky">
-          <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="mb-4 text-none"
+          <VBtn v-if="pockets.length > 0" color="primary" variant="flat" rounded="pill" block class="text-none"
             @click="handleCreate">
             <VIcon icon="mdi-plus" start />
             Add New Allocation
@@ -190,11 +190,13 @@ function handleDelete(id: string) {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
   padding-bottom: 8px;
-  margin: -24px -24px 8px -24px;
-  padding: 16px 24px 8px 24px;
+  margin: -16px -12px 12px -12px;
+  padding: 16px 12px 12px 12px;
+  border-bottom-left-radius: 35px;
+  border-bottom-right-radius: 35px;
 }
 
 /* Mobile: Collapsible content with max-height and smaller text */

@@ -6,10 +6,10 @@ export default defineEventHandler(async (event) => {
   const { userId } = requireAuth(event);
   const db = sql();
   const rows = await db`
-    SELECT id, name, created_at
+    SELECT id, name, order_index, created_at
     FROM public.money_books
     WHERE user_id = ${userId}
-    ORDER BY created_at DESC
+    ORDER BY order_index ASC
   `;
   return rows;
 });

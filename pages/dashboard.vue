@@ -170,6 +170,30 @@ async function handleUpdateBook(book: MoneyBook, name: string) {
   }
 }
 
+async function handleReorderBooks(reorderedBooks: MoneyBook[]) {
+  try {
+    const token = await getToken.value()
+    if (!token) return
+
+    // Update local state immediately for smooth UX
+    moneyBooks.value = reorderedBooks
+
+    // Send new order to server
+    const bookIds = reorderedBooks.map(b => b.id)
+    await $fetch('/api/money-books/reorder', {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: { bookIds }
+    })
+
+    console.log('Books reordered successfully')
+  } catch (error) {
+    console.error('Failed to reorder books:', error)
+    // Reload books to restore correct order
+    await loadMoneyBooks()
+  }
+}
+
 async function handleDeleteBook(book: MoneyBook) {
   if (!confirm(`Delete "${book.name}"? This will also delete all pockets and allocations.`)) return
 
@@ -341,6 +365,7 @@ async function handleDeleteAllocation(id: string) {
             @create="handleCreateBook"
             @update="handleUpdateBook"
             @delete="handleDeleteBook"
+            @reorder="handleReorderBooks"
           />
         </VCol>
       </VRow>

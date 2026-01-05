@@ -14,6 +14,7 @@ interface Emits {
   (e: 'create', name: string): void
   (e: 'update', book: MoneyBook, name: string): void
   (e: 'delete', book: MoneyBook): void
+  (e: 'reorder', books: MoneyBook[]): void
 }
 
 const props = defineProps<Props>()
@@ -29,10 +30,16 @@ const showCreateDialog = ref(false)
 const isInitialized = ref(false)
 const hasBooks = computed(() => props.books.length > 0)
 
+// Drag and drop state
+const localBooks = ref<MoneyBook[]>([])
+const draggedIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
 // Mark as initialized when books data changes (after first fetch)
-watch(() => props.books, () => {
+watch(() => props.books, (newBooks) => {
   isInitialized.value = true
-}) // No immediate: true - only trigger when props actually change
+  localBooks.value = [...newBooks]
+}, { immediate: true }) // Sync props to local state
 
 // Cleanup
 onUnmounted(() => {
@@ -78,6 +85,55 @@ function handleSelect(book: MoneyBook) {
 function handleDelete(book: MoneyBook, event?: Event) {
   if (event) event.stopPropagation()
   emit('delete', book)
+}
+
+// Drag and drop handlers
+function onDragStart(index: number) {
+  draggedIndex.value = index
+}
+
+function onDragOver(event: DragEvent, index: number) {
+  event.preventDefault()
+  dragOverIndex.value = index
+}
+
+function onDragLeave() {
+  dragOverIndex.value = null
+}
+
+function onDrop(event: DragEvent, dropIndex: number) {
+  event.preventDefault()
+  
+  if (draggedIndex.value === null || draggedIndex.value === dropIndex) {
+    draggedIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+
+  // Reorder array
+  const items = [...localBooks.value]
+  const draggedItem = items[draggedIndex.value]
+  
+  if (!draggedItem) {
+    draggedIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+  
+  items.splice(draggedIndex.value, 1)
+  items.splice(dropIndex, 0, draggedItem)
+  
+  localBooks.value = items
+  emit('reorder', items)
+  
+  // Reset state
+  draggedIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragEnd() {
+  draggedIndex.value = null
+  dragOverIndex.value = null
 }
 </script>
 
@@ -127,7 +183,18 @@ function handleDelete(book: MoneyBook, event?: Event) {
             <!-- Books List (Bottom with horizontal scroll) -->
             <div v-if="hasBooks" class="books-scroll-container">
               <div class="books-list">
-                <div v-for="book in books" :key="book.id" class="book-item">
+                <div 
+                  v-for="(book, index) in localBooks" 
+                  :key="book.id" 
+                  class="book-item"
+                  :draggable="editingBook !== book.id"
+                  :class="{ 'drag-over': dragOverIndex === index, 'dragging': draggedIndex === index }"
+                  @dragstart="onDragStart(index)"
+                  @dragover="onDragOver($event, index)"
+                  @dragleave="onDragLeave"
+                  @drop="onDrop($event, index)"
+                  @dragend="onDragEnd"
+                >
                   <!-- Edit Mode -->
                   <VTextField v-if="editingBook === book.id" v-model="editingBookName" variant="outlined"
                     density="compact" hide-details class="edit-input" autofocus @keyup.enter="saveEdit(book)"
@@ -141,6 +208,7 @@ function handleDelete(book: MoneyBook, event?: Event) {
                   <!-- Display Mode -->
                   <VChip v-else :color="selectedBook?.id === book.id ? 'primary' : 'grey'" @click="handleSelect(book)"
                     class="book-chip" :variant="selectedBook?.id === book.id ? 'flat' : 'outlined'">
+                    <VIcon icon="mdi-drag-horizontal-variant" size="small" class="drag-handle mr-1" />
                     {{ book.name }}
                     <VMenu class="border">
                       <template v-slot:activator="{ props }">
@@ -323,6 +391,17 @@ function handleDelete(book: MoneyBook, event?: Event) {
   align-items: center;
   flex-shrink: 0;
   gap: 15px;
+  transition: all 0.2s ease;
+}
+
+.book-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.book-item.drag-over {
+  transform: translateX(8px);
+  transition: transform 0.2s ease;
 }
 
 .book-chip {
@@ -336,6 +415,24 @@ function handleDelete(book: MoneyBook, event?: Event) {
 .book-chip:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+}
+
+.drag-handle {
+  opacity: 0.4;
+  cursor: grab;
+  transition: opacity 0.2s;
+}
+
+.book-chip:hover .drag-handle {
+  opacity: 0.8;
+}
+
+.book-item[draggable="true"] .drag-handle {
+  cursor: grab;
+}
+
+.book-item.dragging .drag-handle {
+  cursor: grabbing;
 }
 
 .edit-input {
