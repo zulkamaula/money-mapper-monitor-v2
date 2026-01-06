@@ -138,7 +138,7 @@ async function handleDelete(id: string) {
             <div class="allocation-card">
               <div class="d-flex justify-space-between align-center cursor-pointer" @click="toggleExpand(allocation.id)">
                 <div>
-                  <div class="text-body-1 font-weight-semibold text-primary mb-1">{{ formatCurrency(allocation.source_amount) }}</div>
+                  <div class="text-body-1 font-weight-semibold text-primary mb-0 mb-sm-1">{{ formatCurrency(allocation.source_amount) }}</div>
                   <div class="text-caption text-medium-emphasis">{{ formatDate(allocation.date) }}</div>
                 </div>
                 <VIcon :icon="expandedAllocation === allocation.id ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
@@ -151,13 +151,13 @@ async function handleDelete(id: string) {
                   <div class="d-flex flex-column ga-3">
                     <div v-for="item in allocation.allocation_items" :key="item.id" 
                       class="d-flex flex-wrap justify-space-between align-center ga-2 pa-3 bg-white rounded">
-                      <div class="d-flex align-center flex-wrap ga-2">
-                        <VChip size="x-small" color="primary" variant="tonal" class="font-weight-medium">
+                      <div class="d-flex align-baseline ga-1 ga-sm-2">
+                        <VChip size="x-small" color="primary" variant="tonal">
                           {{ formatPercentage(item.pocket_percentage) }}
                         </VChip>
-                        <div class="text-body-2 font-weight-semibold text-primary text-wrap w-100 w-sm-auto">{{ item.pocket_name }}</div>
+                        <div class="text-caption text-sm-body-2 font-weight-medium text-primary text-wrap w-100 w-sm-auto" style="line-height: .9rem;">{{ item.pocket_name }}</div>
                       </div>
-                      <div class="d-flex align-center justify-end flex-grow-1 ga-2">
+                      <div class="d-flex align-center justify-space-between justify-sm-end flex-grow-1 ga-2">
                         <div class="text-body-2 font-weight-semibold text-primary">{{ formatCurrency(item.amount) }}</div>
                         <VBtn :icon="copiedAmount === item.id ? 'mdi-check' : 'mdi-content-copy'" size="x-small"
                           variant="text" :color="copiedAmount === item.id ? 'success' : 'grey'"
@@ -167,7 +167,7 @@ async function handleDelete(id: string) {
                   </div>
                   <div v-if="allocation.notes" class="mt-3 pa-3 bg-white rounded d-flex align-start ga-1">
                     <VIcon icon="mdi-note-text" size="small" class="mr-2" color="primary" />
-                    <span class="text-caption text-medium-emphasis">{{ allocation.notes }}</span>
+                    <span class="text-caption text-medium-emphasis font-italic">{{ allocation.notes }}</span>
                   </div>
 
                   <!-- Delete Button -->
@@ -302,13 +302,13 @@ async function handleDelete(id: string) {
 .subtitle-stats {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .subtitle-stats-desktop {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.6);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* Card Expand Animation */

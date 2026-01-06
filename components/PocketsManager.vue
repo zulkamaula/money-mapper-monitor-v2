@@ -364,7 +364,7 @@ async function handleDelete(pocketId: string) {
 }
 
 .pocket-name {
-  font-weight: 600;
+  font-weight: 500;
   line-height: 20px;
   font-size: 0.9rem;
   color: rgba(15, 118, 110, 0.9);
@@ -372,9 +372,8 @@ async function handleDelete(pocketId: string) {
 
 .pocket-actions {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
   gap: 6px;
 }
 
@@ -389,7 +388,7 @@ async function handleDelete(pocketId: string) {
 .subtitle-stats {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
-  font-weight: 500;
+  font-weight: 400;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -398,13 +397,13 @@ async function handleDelete(pocketId: string) {
 .subtitle-stats-desktop {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.6);
-  font-weight: 500;
+  font-weight: 400;
   display: flex;
   align-items: center;
 }
 
 .percentage-chip {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 /* Expand Animation */
