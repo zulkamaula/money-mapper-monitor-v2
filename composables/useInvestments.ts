@@ -118,7 +118,7 @@ export const useInvestments = () => {
 
   // Create new holding
   async function createHolding(data: {
-    asset_type: 'gold' | 'stock_etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other'
+    asset_type: 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other'
     asset_name: string
     platform: string
     instrument_name: string

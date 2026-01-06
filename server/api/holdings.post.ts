@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const { userId } = requireAuth(event)
   const body = await readBody<{ 
     money_book_id: string
-    asset_type: 'gold' | 'stock_etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other'
+    asset_type: 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other'
     asset_name: string
     platform: string
     instrument_name: string

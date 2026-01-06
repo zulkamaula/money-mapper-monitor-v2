@@ -25,10 +25,10 @@ const dialog = computed({
 const isEditMode = computed(() => !!props.holding)
 
 const form = ref({
-  asset_type: 'gold' as 'gold' | 'stock_etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other',
+  asset_type: null as string | 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other' | null | any,
   asset_name: '',
-  platform: '',
-  instrument_name: '',
+  platform: null as string | null,
+  instrument_name: null as string | null,
   initial_investment: 0,
   current_value: 0,
   quantity: undefined as number | undefined,
@@ -40,6 +40,13 @@ const form = ref({
 // Dynamic instrument options based on selected asset type
 const instrumentOptions = computed(() => {
   return instrumentOptionsByAssetType[form.value.asset_type] || []
+})
+
+// Clear instrument name when asset type changes
+watch(() => form.value.asset_type, () => {
+  if (!isEditMode.value) {
+    form.value.instrument_name = null
+  }
 })
 
 const initialDisplay = ref('')
@@ -79,10 +86,10 @@ const allocationItems = computed(() => [
 
 function resetForm() {
   form.value = {
-    asset_type: 'gold',
+    asset_type: null,
     asset_name: '',
-    platform: '',
-    instrument_name: '',
+    platform: null,
+    instrument_name: null,
     initial_investment: 0,
     current_value: 0,
     quantity: undefined,
@@ -132,10 +139,30 @@ watch(currentStep, (newStep) => {
 })
 
 async function handleSubmit() {
+  // Validate required fields
+  if (!form.value.asset_type) {
+    showError('Please select an asset type')
+    return
+  }
+  
   if (!form.value.asset_name || !form.value.platform || !form.value.instrument_name ||
       form.value.initial_investment <= 0 || form.value.current_value <= 0) {
     showError('Please fill all required fields')
     return
+  }
+  
+  // After validation, we know these values are not null
+  const submitData = {
+    asset_type: form.value.asset_type as 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other',
+    asset_name: form.value.asset_name,
+    platform: form.value.platform as string,
+    instrument_name: form.value.instrument_name as string,
+    initial_investment: form.value.initial_investment,
+    current_value: form.value.current_value,
+    quantity: form.value.quantity,
+    average_price: form.value.average_price,
+    notes: form.value.notes,
+    linked_allocation_id: form.value.linked_allocation_id
   }
 
   submitting.value = true
@@ -150,9 +177,9 @@ async function handleSubmit() {
       })
       showSuccess('Holding updated successfully')
     } else {
-      // Create mode
-      await createHolding(form.value)
-      showSuccess('Holding created successfully')
+      // Create mode - use submitData with finalAssetName
+      await createHolding(submitData)
+      showSuccess('Holding added successfully')
     }
     
     emit('save')
@@ -165,25 +192,29 @@ async function handleSubmit() {
 }
 
 watch(() => props.modelValue, (newVal) => {
-  if (newVal && props.holding) {
-    // Edit mode - populate form
-    form.value = {
-      asset_type: (props.holding as any).asset_type || 'gold',
-      asset_name: (props.holding as any).asset_name || '',
-      platform: props.holding.platform,
-      instrument_name: props.holding.instrument_name,
-      initial_investment: props.holding.initial_investment,
-      current_value: props.holding.current_value,
-      quantity: props.holding.quantity,
-      average_price: props.holding.average_price,
-      notes: props.holding.notes || '',
-      linked_allocation_id: props.holding.linked_allocation_id || undefined
+  if (newVal) {
+    // Dialog is opening
+    if (props.holding) {
+      // Edit mode - populate form with holding data
+      form.value = {
+        asset_type: (props.holding as any).asset_type || 'gold',
+        asset_name: (props.holding as any).asset_name || '',
+        platform: props.holding.platform,
+        instrument_name: props.holding.instrument_name,
+        initial_investment: props.holding.initial_investment,
+        current_value: props.holding.current_value,
+        quantity: props.holding.quantity,
+        average_price: props.holding.average_price,
+        notes: props.holding.notes || '',
+        linked_allocation_id: props.holding.linked_allocation_id || undefined
+      }
+      initialDisplay.value = formatNumberInput(props.holding.initial_investment)
+      currentDisplay.value = formatNumberInput(props.holding.current_value)
+      averagePriceDisplay.value = props.holding.average_price ? formatNumberInput(props.holding.average_price) : ''
+    } else {
+      // Create mode - reset form to defaults
+      resetForm()
     }
-    initialDisplay.value = formatNumberInput(props.holding.initial_investment)
-    currentDisplay.value = formatNumberInput(props.holding.current_value)
-    averagePriceDisplay.value = props.holding.average_price ? formatNumberInput(props.holding.average_price) : ''
-  } else if (!newVal) {
-    resetForm()
   }
 })
 </script>
@@ -272,14 +303,16 @@ watch(() => props.modelValue, (newVal) => {
                   </VSelect>
                 </VCol>
 
-                <!-- Asset Name (disabled in edit mode) -->
+                <!-- Asset Name (required - for grouping holdings) -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="form.asset_name"
                     label="Asset Name"
-                    placeholder="e.g., Emas"
+                    placeholder="e.g., Emas Digital, Saham Bluechip, etc."
                     variant="outlined"
                     :disabled="isEditMode || submitting"
+                    hint="Name to group your holdings by category"
+                    persistent-hint
                   />
                 </VCol>
 

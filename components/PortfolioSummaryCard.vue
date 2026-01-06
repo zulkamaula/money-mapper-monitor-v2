@@ -23,7 +23,7 @@ function toggleExpand() {
     <VCardTitle class="card-header pa-5" @click="toggleExpand">
       <div class="header-content">
         <div class="title-section">
-          <div class="d-flex align-center text-body-1 text-sm-h6">
+          <div class="d-flex align-center text-body-1 text-sm-h6 text-primary">
             <VIcon icon="mdi-chart-line" class="mr-2" color="primary" />
             Portfolio Summary
           </div>
