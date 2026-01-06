@@ -27,6 +27,8 @@ const dialogMode = ref<'create' | 'edit'>('create')
 const editingPocketId = ref<string | null>(null)
 const pocketData = ref({ name: '', percentage: 0 })
 const isExpanded = ref(false)
+const submitting = ref(false)
+const deleting = ref<string | null>(null)
 
 const totalPercentage = computed(() => {
   return pockets.value.reduce((sum, p) => {
@@ -92,6 +94,7 @@ async function handleSubmit() {
     return
   }
 
+  submitting.value = true
   try {
     if (dialogMode.value === 'create') {
       await createPocket(pocketData.value.name, pocketData.value.percentage)
@@ -106,6 +109,8 @@ async function handleSubmit() {
     editingPocketId.value = null
   } catch (error) {
     showError(dialogMode.value === 'create' ? 'Failed to create pocket' : 'Failed to update pocket')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -125,11 +130,14 @@ async function handleDelete(pocketId: string) {
 
   if (!confirmed) return
 
+  deleting.value = pocketId
   try {
     await deletePocket(pocketId)
     showSuccess(`"${pocket.name}" deleted successfully`)
   } catch (error) {
     showError('Failed to delete pocket')
+  } finally {
+    deleting.value = null
   }
 }
 </script>
@@ -208,8 +216,14 @@ async function handleDelete(pocketId: string) {
                     <VListItemTitle>Edit</VListItemTitle>
                   </VListItem>
                   <VDivider />
-                  <VListItem @click="handleDelete(pocket.id)">
-                    <VListItemTitle class="text-error font-weight-bold">Delete</VListItemTitle>
+                  <VListItem @click="handleDelete(pocket.id)" :disabled="deleting === pocket.id">
+                    <VListItemTitle class="text-error font-weight-bold">
+                      <span v-if="deleting === pocket.id">
+                        <VProgressCircular indeterminate size="16" width="2" class="mr-2" />
+                        Deleting...
+                      </span>
+                      <span v-else>Delete</span>
+                    </VListItemTitle>
                   </VListItem>
                 </VList>
               </VMenu>
@@ -245,7 +259,8 @@ async function handleDelete(pocketId: string) {
           <VSpacer />
           <VBtn color="grey" variant="text" class="text-none" @click="showDialog = false">Cancel</VBtn>
           <VBtn color="primary" variant="flat" class="px-5 text-none" @click="handleSubmit"
-            :disabled="!pocketData.name.trim() || pocketData.percentage <= 0 || !canAddPocket">
+            :disabled="!pocketData.name.trim() || pocketData.percentage <= 0 || !canAddPocket || submitting"
+            :loading="submitting">
             {{ dialogMode === 'create' ? 'Add Pocket' : 'Save Changes' }}
           </VBtn>
         </VCardActions>

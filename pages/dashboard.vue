@@ -13,29 +13,6 @@ const { getToken } = useAuth()
 
 // Use composables for state management
 const { selectedBook } = useMoneyBooks()
-const { pockets } = usePockets()
-const { createAllocation } = useAllocations()
-
-// Dialog state
-const showAllocationDialog = ref(false)
-
-// Use modular notification system
-const { success: showSuccess, error: showError } = useNotification()
-
-// Allocation Dialog Handlers
-function openAllocationDialog() {
-  showAllocationDialog.value = true
-}
-
-async function handleCreateAllocation(data: { sourceAmount: number; date: string; notes: string }) {
-  try {
-    await createAllocation(data.sourceAmount, data.date, data.notes)
-    showAllocationDialog.value = false
-    showSuccess('Allocation created successfully')
-  } catch (error) {
-    showError('Failed to create allocation')
-  }
-}
 </script>
 
 <template>
@@ -55,19 +32,12 @@ async function handleCreateAllocation(data: { sourceAmount: number; date: string
           <LazyPocketsManager />
         </VCol>
 
-        <!-- Allocations History (Self-contained, only emits create for dialog) -->
+        <!-- Allocations History (Self-contained with dialog) -->
         <VCol cols="12" sm="12" md="8" class="dashboard-col">
-          <LazyAllocationsHistory @create="openAllocationDialog" />
+          <LazyAllocationsHistory />
         </VCol>
       </VRow>
     </VContainer>
-
-    <!-- Allocation Dialog (Lazy loaded) -->
-    <LazyAllocationDialog
-      v-model="showAllocationDialog"
-      :pockets="pockets"
-      @save="handleCreateAllocation"
-    />
 
     <!-- Modular Components -->
     <AppNotification />

@@ -13,6 +13,7 @@ const editingBookName = ref('')
 const showCreateDialog = ref(false)
 const isInitialized = ref(false)
 const isUpdating = ref(false)
+const deleting = ref<string | null>(null)
 
 // Computed
 const hasBooks = computed(() => books.value.length > 0)
@@ -99,11 +100,14 @@ async function handleDelete(book: MoneyBook, event?: Event) {
   
   if (!confirmed) return
   
+  deleting.value = book.id
   try {
     await deleteBook(book.id)
     showSuccess(`"${book.name}" deleted successfully`)
   } catch (error) {
     showError('Failed to delete money book')
+  } finally {
+    deleting.value = null
   }
 }
 
@@ -250,11 +254,14 @@ function onDragEnd() {
                           </template>
                           <VListItemTitle>Edit</VListItemTitle>
                         </VListItem>
-                        <VListItem @click="handleDelete(book)">
+                        <VListItem @click="handleDelete(book)" :disabled="deleting === book.id">
                           <template v-slot:prepend>
-                            <VIcon icon="mdi-delete" color="error" />
+                            <VProgressCircular v-if="deleting === book.id" indeterminate size="16" width="2" color="error" />
+                            <VIcon v-else icon="mdi-delete" color="error" />
                           </template>
-                          <VListItemTitle class="text-error">Delete</VListItemTitle>
+                          <VListItemTitle class="text-error">
+                            {{ deleting === book.id ? 'Deleting...' : 'Delete' }}
+                          </VListItemTitle>
                         </VListItem>
                       </VList>
                     </VMenu>

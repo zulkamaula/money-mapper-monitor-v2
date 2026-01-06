@@ -1,12 +1,17 @@
 import type { Pocket } from '~/types/models'
 
 export const usePockets = () => {
-  const { getToken } = useAuth()
   const { selectedBook } = useMoneyBooks()
   
   // Global state - shared across components
   const pockets = useState<Pocket[]>('pockets', () => [])
   const loading = useState<boolean>('pockets-loading', () => false)
+  
+  // Simple per-book cache
+  const cache = useState<Map<string, Pocket[]>>('pockets-cache', () => new Map())
+  
+  // AbortController for request cancellation
+  let abortController: AbortController | null = null
 
   // Load pockets for current selected book
   async function loadPockets() {
@@ -15,20 +20,47 @@ export const usePockets = () => {
       return
     }
 
+    const bookId = selectedBook.value.id
+    
+    // Check cache first
+    const cached = cache.value.get(bookId)
+    if (cached) {
+      pockets.value = cached
+      return
+    }
+
+    // Cancel previous request if still pending
+    if (abortController) {
+      abortController.abort()
+    }
+    
+    // Create new controller for this request
+    const currentController = new AbortController()
+    abortController = currentController
+
     loading.value = true
     try {
-      const token = await getToken.value()
-      if (!token) return
-
-      const data = await $fetch<Pocket[]>(`/api/pockets?money_book_id=${selectedBook.value.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await $fetch<Pocket[]>(`/api/pockets?money_book_id=${bookId}`, {
+        signal: currentController.signal
       })
-      pockets.value = data
-    } catch (error) {
+      
+      // Only update if this controller wasn't aborted
+      if (abortController === currentController) {
+        pockets.value = data
+        cache.value.set(bookId, data)
+      }
+    } catch (error: any) {
+      // Silently ignore abort errors (expected during fast switching)
+      if (error.name === 'AbortError' || error.cause?.name === 'AbortError') {
+        return
+      }
       console.error('Failed to load pockets:', error)
       throw error
     } finally {
-      loading.value = false
+      if (abortController === currentController) {
+        loading.value = false
+        abortController = null
+      }
     }
   }
 
@@ -37,12 +69,8 @@ export const usePockets = () => {
     if (!selectedBook.value) return null
 
     try {
-      const token = await getToken.value()
-      if (!token) return null
-
       const newPocket = await $fetch<Pocket>('/api/pockets', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: {
           money_book_id: selectedBook.value.id,
           name,
@@ -52,6 +80,12 @@ export const usePockets = () => {
       })
 
       pockets.value.push(newPocket)
+      
+      // Update cache
+      if (selectedBook.value) {
+        cache.value.set(selectedBook.value.id, [...pockets.value])
+      }
+      
       return newPocket
     } catch (error) {
       console.error('Failed to create pocket:', error)
@@ -62,12 +96,8 @@ export const usePockets = () => {
   // Update pocket
   async function updatePocket(pocketId: string, name: string, percentage: number) {
     try {
-      const token = await getToken.value()
-      if (!token) return null
-
       const updatedPocket = await $fetch<Pocket>(`/api/pockets/${pocketId}`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: { name, percentage }
       })
 
@@ -75,6 +105,12 @@ export const usePockets = () => {
       if (index !== -1) {
         pockets.value[index] = updatedPocket
       }
+      
+      // Update cache
+      if (selectedBook.value) {
+        cache.value.set(selectedBook.value.id, [...pockets.value])
+      }
+      
       return updatedPocket
     } catch (error) {
       console.error('Failed to update pocket:', error)
@@ -85,15 +121,17 @@ export const usePockets = () => {
   // Delete pocket
   async function deletePocket(pocketId: string) {
     try {
-      const token = await getToken.value()
-      if (!token) return false
-
       await $fetch(`/api/pockets/${pocketId}`, {
-        method: 'DELETE' as any,
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE' as any
       })
 
       pockets.value = pockets.value.filter(p => p.id !== pocketId)
+      
+      // Update cache
+      if (selectedBook.value) {
+        cache.value.set(selectedBook.value.id, [...pockets.value])
+      }
+      
       return true
     } catch (error) {
       console.error('Failed to delete pocket:', error)

@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { Pocket } from '~/types/models'
 import { formatNumberInput, parseNumberInput } from '~/utils/format'
+
+// Self-contained - use composables
+const { createAllocation } = useAllocations()
+const { success: showSuccess, error: showError } = useNotification()
 
 interface Props {
   modelValue: boolean
-  pockets: Pocket[]
-}
-
-interface Emits {
-  (e: 'update:modelValue', value: boolean): void
-  (e: 'save', data: { sourceAmount: number; date: string; notes: string }): void
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: boolean): void
+}>()
 
 const form = ref({
   sourceAmount: 0,
@@ -23,6 +22,7 @@ const form = ref({
 })
 
 const sourceAmountDisplay = ref('')
+const saving = ref(false)
 
 const internalValue = computed({
   get: () => props.modelValue,
@@ -46,14 +46,20 @@ function handleAmountPaste(event: ClipboardEvent) {
 }
 
 
-function handleSave() {
-  if (!form.value.date) return
-  emit('save', {
-    sourceAmount: form.value.sourceAmount,
-    date: form.value.date,
-    notes: form.value.notes
-  })
-  resetForm()
+async function handleSave() {
+  if (!form.value.date || form.value.sourceAmount <= 0) return
+  
+  saving.value = true
+  try {
+    await createAllocation(form.value.sourceAmount, form.value.date, form.value.notes)
+    showSuccess('Allocation created successfully')
+    internalValue.value = false
+    resetForm()
+  } catch (error) {
+    showError('Failed to create allocation')
+  } finally {
+    saving.value = false
+  }
 }
 
 function resetForm() {
@@ -91,7 +97,7 @@ function resetForm() {
         <VSpacer />
         <VBtn color="grey" variant="text" class="text-none" @click="internalValue = false">Cancel</VBtn>
         <VBtn color="primary" variant="flat" class="text-none px-5" @click="handleSave"
-          :disabled="form.sourceAmount <= 0">
+          :disabled="form.sourceAmount <= 0 || saving" :loading="saving">
           Save Allocation
         </VBtn>
       </VCardActions>

@@ -26,6 +26,8 @@ watch(() => selectedBook.value, async (newBook) => {
 const expandedAllocation = ref<string | null>(null)
 const copiedAmount = ref<string | null>(null)
 const isExpanded = ref(true)
+const deleting = ref<string | null>(null)
+const showAllocationDialog = ref(false)
 
 function toggleCardExpand() {
   isExpanded.value = !isExpanded.value
@@ -53,13 +55,8 @@ async function copyAmount(amount: number, itemId: string) {
   }
 }
 
-// Emit create event for parent to handle dialog
-const emit = defineEmits<{
-  (e: 'create'): void
-}>()
-
 function handleCreate() {
-  emit('create')
+  showAllocationDialog.value = true
 }
 
 async function handleDelete(id: string) {
@@ -78,11 +75,14 @@ async function handleDelete(id: string) {
 
   if (!confirmed) return
 
+  deleting.value = id
   try {
     await deleteAllocation(id)
     showSuccess('Allocation deleted successfully')
   } catch (error) {
     showError('Failed to delete allocation')
+  } finally {
+    deleting.value = null
   }
 }
 </script>
@@ -173,7 +173,8 @@ async function handleDelete(id: string) {
                   <!-- Delete Button -->
                   <div class="d-flex justify-end mt-3 pt-2" style="border-top: 1px dashed rgba(15, 118, 110, 0.2)">
                     <VBtn color="error" variant="tonal" size="small" prepend-icon="mdi-delete" class="text-none"
-                      rounded="pill" @click.stop="handleDelete(allocation.id)">
+                      rounded="pill" @click.stop="handleDelete(allocation.id)"
+                      :disabled="deleting === allocation.id" :loading="deleting === allocation.id">
                       Delete Allocation
                     </VBtn>
                   </div>
@@ -185,6 +186,9 @@ async function handleDelete(id: string) {
       </VCardText>
     </Transition>
   </VCard>
+
+  <!-- Allocation Dialog -->
+  <LazyAllocationDialog v-model="showAllocationDialog" />
 </template>
 
 <style scoped>

@@ -1,13 +1,18 @@
 import type { Allocation } from '~/types/models'
 
 export const useAllocations = () => {
-  const { getToken } = useAuth()
   const { selectedBook } = useMoneyBooks()
   const { pockets } = usePockets()
   
   // Global state - shared across components
   const allocations = useState<Allocation[]>('allocations', () => [])
   const loading = useState<boolean>('allocations-loading', () => false)
+  
+  // Simple per-book cache
+  const cache = useState<Map<string, Allocation[]>>('allocations-cache', () => new Map())
+  
+  // AbortController for request cancellation
+  let abortController: AbortController | null = null
 
   // Load allocations for current selected book
   async function loadAllocations() {
@@ -16,20 +21,47 @@ export const useAllocations = () => {
       return
     }
 
+    const bookId = selectedBook.value.id
+    
+    // Check cache first
+    const cached = cache.value.get(bookId)
+    if (cached) {
+      allocations.value = cached
+      return
+    }
+
+    // Cancel previous request if still pending
+    if (abortController) {
+      abortController.abort()
+    }
+    
+    // Create new controller for this request
+    const currentController = new AbortController()
+    abortController = currentController
+
     loading.value = true
     try {
-      const token = await getToken.value()
-      if (!token) return
-
-      const data = await $fetch<Allocation[]>(`/api/allocations?money_book_id=${selectedBook.value.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await $fetch<Allocation[]>(`/api/allocations?money_book_id=${bookId}`, {
+        signal: currentController.signal
       })
-      allocations.value = data
-    } catch (error) {
+      
+      // Only update if this controller wasn't aborted
+      if (abortController === currentController) {
+        allocations.value = data
+        cache.value.set(bookId, data)
+      }
+    } catch (error: any) {
+      // Silently ignore abort errors (expected during fast switching)
+      if (error.name === 'AbortError' || error.cause?.name === 'AbortError') {
+        return
+      }
       console.error('Failed to load allocations:', error)
       throw error
     } finally {
-      loading.value = false
+      if (abortController === currentController) {
+        loading.value = false
+        abortController = null
+      }
     }
   }
 
@@ -38,12 +70,8 @@ export const useAllocations = () => {
     if (!selectedBook.value) return null
 
     try {
-      const token = await getToken.value()
-      if (!token) return null
-
       const newAllocation = await $fetch<Allocation>('/api/allocations', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: {
           money_book_id: selectedBook.value.id,
           source_amount: sourceAmount,
@@ -58,6 +86,12 @@ export const useAllocations = () => {
       })
 
       allocations.value.unshift(newAllocation)
+      
+      // Update cache
+      if (selectedBook.value) {
+        cache.value.set(selectedBook.value.id, [...allocations.value])
+      }
+      
       return newAllocation
     } catch (error) {
       console.error('Failed to create allocation:', error)
@@ -68,15 +102,17 @@ export const useAllocations = () => {
   // Delete allocation
   async function deleteAllocation(allocationId: string) {
     try {
-      const token = await getToken.value()
-      if (!token) return false
-
       await $fetch(`/api/allocations/${allocationId}`, {
-        method: 'DELETE' as any,
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE' as any
       })
 
       allocations.value = allocations.value.filter(a => a.id !== allocationId)
+      
+      // Update cache
+      if (selectedBook.value) {
+        cache.value.set(selectedBook.value.id, [...allocations.value])
+      }
+      
       return true
     } catch (error) {
       console.error('Failed to delete allocation:', error)

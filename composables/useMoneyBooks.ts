@@ -1,8 +1,6 @@
 import type { MoneyBook } from '~/types/models'
 
 export const useMoneyBooks = () => {
-  const { getToken } = useAuth()
-  
   // Global state - shared across components
   const books = useState<MoneyBook[]>('money-books', () => [])
   const selectedBook = useState<MoneyBook | null>('selected-book', () => null)
@@ -13,12 +11,7 @@ export const useMoneyBooks = () => {
   async function loadBooks() {
     loading.value = true
     try {
-      const token = await getToken.value()
-      if (!token) return
-
-      const data = await $fetch<MoneyBook[]>('/api/money-books', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const data = await $fetch<MoneyBook[]>('/api/money-books')
       books.value = data
 
       // Auto-select first book if none selected
@@ -42,12 +35,8 @@ export const useMoneyBooks = () => {
   async function createBook(name: string) {
     creating.value = true
     try {
-      const token = await getToken.value()
-      if (!token) return null
-
       const newBook = await $fetch<MoneyBook>('/api/money-books', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: { name }
       })
 
@@ -65,12 +54,8 @@ export const useMoneyBooks = () => {
   // Update book
   async function updateBook(bookId: string, name: string) {
     try {
-      const token = await getToken.value()
-      if (!token) return null
-
       const updatedBook = await $fetch<MoneyBook>(`/api/money-books/${bookId}`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: { name }
       })
 
@@ -91,12 +76,8 @@ export const useMoneyBooks = () => {
   // Delete book
   async function deleteBook(bookId: string) {
     try {
-      const token = await getToken.value()
-      if (!token) return false
-
       await $fetch(`/api/money-books/${bookId}`, {
-        method: 'DELETE' as any,
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE' as any
       })
 
       books.value = books.value.filter(b => b.id !== bookId)
@@ -115,15 +96,11 @@ export const useMoneyBooks = () => {
   // Reorder books
   async function reorderBooks(reorderedBooks: MoneyBook[]) {
     try {
-      const token = await getToken.value()
-      if (!token) return false
-
       books.value = reorderedBooks
 
       const bookIds = reorderedBooks.map(b => b.id)
       await $fetch('/api/money-books/reorder', {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: { bookIds }
       })
       return true
