@@ -15,11 +15,17 @@ export const useInvestments = () => {
 
   // Computed totals
   const totalInvested = computed(() => {
-    return holdings.value.reduce((sum, h) => sum + h.initial_investment, 0)
+    return holdings.value.reduce((sum, h) => {
+      const value = h.initial_investment
+      return sum + (isNaN(value) ? 0 : value)
+    }, 0)
   })
 
   const currentValue = computed(() => {
-    return holdings.value.reduce((sum, h) => sum + h.current_value, 0)
+    return holdings.value.reduce((sum, h) => {
+      const value = h.current_value
+      return sum + (isNaN(value) ? 0 : value)
+    }, 0)
   })
 
   const totalProfit = computed(() => {

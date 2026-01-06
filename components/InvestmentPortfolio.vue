@@ -196,7 +196,7 @@ function getProfitColor(holding: Holding) {
                               :color="calculateProfit(holding) >= 0 ? 'success' : 'error'" 
                               variant="flat"
                             >
-                              {{ calculateProfit(holding) >= 0 ? '+' : '' }}{{ calculateProfitPercentage(holding) }}%
+                              {{ calculateProfit(holding) >= 0 ? '+' : '' }}{{ calculateProfitPercentage(holding).toFixed(2) }}%
                             </VChip>
                           </div>
 

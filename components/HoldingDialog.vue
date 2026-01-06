@@ -359,7 +359,24 @@ watch(() => props.modelValue, (newVal) => {
                     inputmode="numeric"
                     :disabled="isEditMode || submitting"
                     @input="handleInitialInput"
-                  />
+                  >
+                    <template v-slot:append-inner>
+                      <VTooltip location="top">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                        </template>
+                        <div class="pa-2" style="max-width: 300px;">
+                          <div class="text-caption font-weight-bold mb-1">Total amount you invested initially</div>
+                          <div class="text-caption">
+                            <strong>Examples:</strong><br>
+                            • Emas: 10 gram × Rp 1.000.000 = Rp 10.000.000<br>
+                            • Saham: 100 shares × Rp 10.000 = Rp 1.000.000<br>
+                            • ETF: 5 units × Rp 500.000 = Rp 2.500.000
+                          </div>
+                        </div>
+                      </VTooltip>
+                    </template>
+                  </VTextField>
                 </VCol>
 
                 <!-- Current Value (always editable) -->
@@ -372,10 +389,25 @@ watch(() => props.modelValue, (newVal) => {
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
-                    hint="Today's market value or latest price of your investment"
-                    persistent-hint
                     @input="handleCurrentInput"
-                  />
+                  >
+                    <template v-slot:append-inner>
+                      <VTooltip location="top">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                        </template>
+                        <div class="pa-2" style="max-width: 300px;">
+                          <div class="text-caption font-weight-bold mb-1">Today's market value</div>
+                          <div class="text-caption">
+                            <strong>Examples:</strong><br>
+                            • Emas: 10 gram × Rp 1.200.000 = Rp 12.000.000<br>
+                            • Saham: 100 shares × Rp 10.500 = Rp 1.050.000<br>
+                            • ETF: 5 units × $520 = Rp 8.320.000 (convert to IDR)
+                          </div>
+                        </div>
+                      </VTooltip>
+                    </template>
+                  </VTextField>
                 </VCol>
 
                 <!-- Quantity (optional) -->
@@ -385,27 +417,60 @@ watch(() => props.modelValue, (newVal) => {
                     :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity (Optional)'"
                     placeholder="0"
                     variant="outlined"
-                    type="number"
-                    step="0.0001"
+                    inputmode="numeric"
+                    :suffix="form.asset_type === 'gold' ? 'gram' : ''"
                     :disabled="submitting"
-                    :suffix="form.asset_type === 'gold' ? 'gram' : undefined"
-                  />
+                  >
+                    <template v-slot:append-inner>
+                      <VTooltip location="top">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                        </template>
+                        <div class="pa-2" style="max-width: 280px;">
+                          <div class="text-caption font-weight-bold mb-1">Number of units you own</div>
+                          <div class="text-caption">
+                            <strong>Examples:</strong><br>
+                            • Emas: 10 (grams)<br>
+                            • Saham: 100 (shares/lot)<br>
+                            • ETF: 5 (units)<br>
+                            • Crypto: 0.5 (BTC)
+                          </div>
+                        </div>
+                      </VTooltip>
+                    </template>
+                  </VTextField>
                 </VCol>
 
                 <!-- Average Price (optional) -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="averagePriceDisplay"
-                    label="Average Price per Unit (Optional)"
+                    label="Average Price (Optional)"
                     placeholder="0"
                     variant="outlined"
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
                     @input="handleAveragePriceInput"
-                    hint="Price per unit (e.g., per share, per gram, per BTC)"
-                    persistent-hint
-                  />
+                  >
+                    <template v-slot:append-inner>
+                      <VTooltip location="top">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                        </template>
+                        <div class="pa-2" style="max-width: 280px;">
+                          <div class="text-caption font-weight-bold mb-1">Price per unit</div>
+                          <div class="text-caption">
+                            <strong>Examples:</strong><br>
+                            • Emas: Rp 1.000.000/gram<br>
+                            • Saham: Rp 10.000/share<br>
+                            • ETF: Rp 500.000/unit<br>
+                            • Reksadana: Rp 1.250/unit
+                          </div>
+                        </div>
+                      </VTooltip>
+                    </template>
+                  </VTextField>
                 </VCol>
               </VRow>
             </VStepperWindowItem>
