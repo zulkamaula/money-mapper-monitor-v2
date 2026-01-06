@@ -178,9 +178,6 @@ function getProfitColor(holding: Holding) {
                                 </VListItem>
                                 <VDivider />
                                 <VListItem @click="handleDeleteHolding(holding)">
-                                  <template v-slot:prepend>
-                                    <VIcon icon="mdi-delete" color="error" />
-                                  </template>
                                   <VListItemTitle class="text-error font-weight-medium">
                                     Delete
                                   </VListItemTitle>

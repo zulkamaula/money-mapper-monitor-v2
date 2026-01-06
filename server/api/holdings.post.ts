@@ -101,7 +101,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 500, statusText: 'Failed to create asset' })
   }
 
-  // Create holding
+  // Create holding with asset info
   const holding = await db`
     INSERT INTO public.holdings (
       id, asset_id, platform, instrument_name, 
@@ -118,5 +118,10 @@ export default defineEventHandler(async (event) => {
               notes, linked_allocation_id, last_updated, created_at
   `
   
-  return holding[0]
+  // Return holding with asset info for proper frontend grouping
+  return {
+    ...holding[0],
+    asset_type: asset_type,
+    asset_name: asset_name
+  }
 })

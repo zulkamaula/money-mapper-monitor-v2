@@ -372,6 +372,8 @@ watch(() => props.modelValue, (newVal) => {
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
+                    hint="Today's market value or latest price of your investment"
+                    persistent-hint
                     @input="handleCurrentInput"
                   />
                 </VCol>
