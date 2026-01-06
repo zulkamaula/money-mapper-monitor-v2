@@ -223,7 +223,7 @@ async function handleDelete(pocketId: string) {
     <!-- Pocket Dialog (Create/Edit) -->
     <VDialog v-model="showDialog" max-width="500">
       <VCard>
-        <VCardTitle class="pa-5 text-subtitle-1">
+        <VCardTitle class="pa-5 text-subtitle-1 font-weight-semibold text-primary">
           <VIcon :icon="dialogMode === 'create' ? 'mdi-wallet-plus' : 'mdi-pencil'" class="mr-2" />
           {{ dialogMode === 'create' ? 'Add New Pocket' : 'Edit Pocket' }}
         </VCardTitle>

@@ -75,7 +75,7 @@ function resetForm() {
 <template>
   <VDialog v-model="internalValue" max-width="600">
     <VCard>
-      <VCardTitle class="pa-5 text-subtitle-1">
+      <VCardTitle class="pa-5 text-subtitle-1 font-weight-semibold text-primary">
         <VIcon icon="mdi-chart-donut" class="mr-2" />
         Create New Allocation
       </VCardTitle>

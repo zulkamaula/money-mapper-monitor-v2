@@ -4,6 +4,7 @@ import 'vuetify/styles'
 
 // Import only used components for tree-shaking
 import {
+  VAlert,
   VApp,
   VAppBar,
   VAvatar,
@@ -30,6 +31,7 @@ import {
   VSkeletonLoader,
   VSnackbar,
   VSpacer,
+  VSwitch,
   VTextField,
 } from 'vuetify/components'
 
@@ -40,6 +42,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
     ssr: true,
     components: {
+      VAlert,
       VApp,
       VAppBar,
       VAvatar,
@@ -66,6 +69,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       VSkeletonLoader,
       VSnackbar,
       VSpacer,
+      VSwitch,
       VTextField,
     },
     directives: {

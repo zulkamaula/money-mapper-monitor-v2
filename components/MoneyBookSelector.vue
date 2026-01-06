@@ -7,7 +7,6 @@ const { success: showSuccess, error: showError } = useNotification()
 const { showDialog } = useConfirmDialog()
 
 // Local UI state
-const newBookName = ref('')
 const editingBook = ref<string | null>(null)
 const editingBookName = ref('')
 const showCreateDialog = ref(false)
@@ -33,22 +32,20 @@ watch(() => books.value, (newBooks) => {
   localBooks.value = [...newBooks]
 }, { immediate: true, deep: true })
 
-async function handleCreate() {
-  if (!newBookName.value.trim()) return
-  
+async function handleCreateConfirm(data: { name: string, hasInvestmentPortfolio: boolean }) {
   try {
-    await createBook(newBookName.value.trim())
-    showSuccess(`"${newBookName.value.trim()}" created successfully`)
-    newBookName.value = ''
+    await createBook(data.name, data.hasInvestmentPortfolio)
+    const investmentMsg = data.hasInvestmentPortfolio ? ' with Investment Tracking' : ''
+    showSuccess(`"${data.name}"${investmentMsg} created successfully`)
     showCreateDialog.value = false
   } catch (error) {
     showError('Failed to create money book')
+    throw error
   }
 }
 
 function openCreateDialog() {
   showCreateDialog.value = true
-  newBookName.value = ''
 }
 
 function startEdit(book: MoneyBook, event?: Event) {
@@ -169,41 +166,30 @@ function onDragEnd() {
     </VCard>
 
     <!-- Empty State -->
-     <template v-else-if="!hasBooks && isInitialized">
-         <div class="empty-state-container">
-           <VIcon icon="mdi-book-open-variant" size="80" color="grey-darken-1" class="mb-4" />
-           <div class="text-left">
-             <div class="text-body-1 text-sm-h6 text-grey-darken-1">No Money Books Yet</div>
-             <VBtn color="white" variant="flat" size="small" rounded="pill" @click="openCreateDialog"
-               class="mt-2 text-capitalize">
-               <VIcon icon="mdi-plus" start />
-               Create Your First One
-             </VBtn>
-           </div>
-         </div>
-     </template>
+    <template v-else-if="!hasBooks && isInitialized">
+      <div class="empty-state-container">
+        <VIcon icon="mdi-book-open-variant" size="80" color="grey-darken-1" class="mb-4" />
+        <div class="text-left">
+          <div class="text-body-1 text-sm-h6 text-grey-darken-1">No Money Books Yet</div>
+          <VBtn color="white" variant="flat" size="small" rounded="pill" @click="openCreateDialog"
+            class="mt-2 text-capitalize">
+            <VIcon icon="mdi-plus" start />
+            Create Your First One
+          </VBtn>
+        </div>
+      </div>
+    </template>
 
     <!-- Selector Card with Books Data -->
     <template v-else-if="hasBooks">
       <Transition name="slide-down">
         <VCard class="selector-card" elevation="0">
-        <VCardText class="pa-5">
-          <div class="selector-wrapper">
-            <!-- Create New Book (Top) -->
-            <div class="create-section">
-              <VTextField v-model="newBookName" variant="outlined" density="comfortable" placeholder="New book name"
-                color="primary" hide-details class="create-input" :loading="creating" autofocus
-                @keyup.enter="handleCreate">
-                <template #append-inner>
-                  <VBtn icon="mdi-book-plus" color="primary" variant="plain" class="pa-0 h-auto w-auto"
-                    @click="handleCreate" />
-                </template>
-              </VTextField>
-            </div>
-
-            <!-- Books List (Bottom with horizontal scroll) -->
-            <div v-if="hasBooks" class="books-scroll-container">
-              <div class="books-list">
+          <VCardText class="pa-5">
+            <VRow align="center" class="ga-3">
+              <!-- Books List with horizontal scroll -->
+              <VCol cols="12" md="auto" class="flex-grow-1">
+                <div class="books-scroll-container">
+                  <div class="books-list">
                 <div 
                   v-for="(book, index) in localBooks" 
                   :key="book.id" 
@@ -255,34 +241,37 @@ function onDragEnd() {
                     </VMenu>
                   </VChip>
                 </div>
-              </div>
-            </div>
-          </div>
-        </VCardText>
-      </VCard>
-    </Transition>
+                  </div>
+                </div>
+              </VCol>
+
+              <!-- Add Book Button -->
+              <VCol cols="12" md="auto">
+                <VBtn
+                  color="primary"
+                  variant="tonal"
+                  size="large"
+                  @click="openCreateDialog"
+                  :loading="creating"
+                  class="text-none"
+                  rounded="lg"
+                  block
+                >
+                  <VIcon icon="mdi-plus" start />
+                  Add Book
+                </VBtn>
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
+      </Transition>
     </template>
 
-    <!-- Create Money Book Dialog -->
-    <VDialog v-model="showCreateDialog" max-width="600">
-      <VCard class="dialog-card" elevation="0">
-        <VCardText class="pa-6">
-          <div class="create-form">
-            <VTextField v-model="newBookName" variant="outlined" placeholder="Money Book Name" color="primary" autofocus
-              hide-details :loading="creating" @keyup.enter="handleCreate" class="flex-1">
-              <template v-slot:prepend-inner>
-                <VIcon icon="mdi-book-outline" />
-              </template>
-            </VTextField>
-            <VBtn variant="tonal" color="primary" size="large" @click="handleCreate"
-              :disabled="!newBookName.trim() || creating" :loading="creating">
-              Next
-              <VIcon icon="mdi-arrow-right" end />
-            </VBtn>
-          </div>
-        </VCardText>
-      </VCard>
-    </VDialog>
+    <!-- Create Book Dialog -->
+    <CreateBookDialog
+      v-model="showCreateDialog"
+      @confirm="handleCreateConfirm"
+    />
   </div>
 </template>
 
@@ -341,32 +330,6 @@ function onDragEnd() {
   border: 1px solid rgba(15, 118, 110, 0.1);
 }
 
-.selector-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.create-section {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-}
-
-.create-input {
-  flex: 1;
-}
-
-.create-input :deep(.v-field) {
-  border-radius: 12px;
-}
-
-.add-btn {
-  height: 48px;
-  min-width: 48px;
-  flex-shrink: 0;
-}
 
 .books-scroll-container {
   width: 100%;
