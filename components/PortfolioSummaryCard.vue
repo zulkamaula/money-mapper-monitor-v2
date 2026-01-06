@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/format'
 
-const { totalInvested, currentValue, totalProfit, profitPercentage, loading } = useInvestments()
+const { totalInvested, currentValue, totalProfit, profitPercentage, loading, assetAllocationData } = useInvestments()
 
 const profitColor = computed(() => {
   return totalProfit.value >= 0 ? 'success' : 'error'
@@ -65,6 +65,17 @@ const profitIcon = computed(() => {
           </div>
         </VCol>
       </VRow>
+
+      <!-- Asset Allocation Chart -->
+      <VDivider v-if="Object.keys(assetAllocationData).length > 0" class="my-4" />
+      
+      <div v-if="Object.keys(assetAllocationData).length > 0" class="chart-section">
+        <div class="d-flex align-center mb-3">
+          <VIcon icon="mdi-chart-donut" size="20" color="primary" class="mr-2" />
+          <span class="text-subtitle-2 font-weight-semibold">Asset Allocation</span>
+        </div>
+        <AssetAllocationChart :data="assetAllocationData" />
+      </div>
     </VCardText>
   </VCard>
 </template>

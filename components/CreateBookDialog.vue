@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { MoneyBook } from '~/types/models'
+
 const props = defineProps<{
   modelValue: boolean
+  book?: MoneyBook
 }>()
 
 const emit = defineEmits<{
@@ -18,9 +21,16 @@ const dialog = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+const isEditMode = computed(() => !!props.book)
+
 function resetForm() {
-  bookName.value = ''
-  hasInvestmentPortfolio.value = false
+  if (props.book) {
+    bookName.value = props.book.name
+    hasInvestmentPortfolio.value = props.book.has_investment_portfolio || false
+  } else {
+    bookName.value = ''
+    hasInvestmentPortfolio.value = false
+  }
   submitting.value = false
 }
 
@@ -48,7 +58,7 @@ watch(() => hasInvestmentPortfolio.value, (newVal) => {
 })
 
 watch(() => props.modelValue, (newVal) => {
-  if (!newVal) {
+  if (newVal) {
     resetForm()
   }
 })
@@ -58,8 +68,8 @@ watch(() => props.modelValue, (newVal) => {
   <VDialog v-model="dialog" max-width="500" persistent>
     <VCard>
       <VCardTitle class="pa-5 text-subtitle-1 font-weight-semibold text-primary">
-        <VIcon icon="mdi-book-plus" class="mr-2" />
-        Create Money Book
+        <VIcon :icon="isEditMode ? 'mdi-book-edit' : 'mdi-book-plus'" class="mr-2" />
+        {{ isEditMode ? 'Edit Money Book' : 'Create Money Book' }}
       </VCardTitle>
 
       <VDivider />
@@ -69,7 +79,7 @@ watch(() => props.modelValue, (newVal) => {
         <VTextField
           v-model="bookName"
           label="Book Name"
-          placeholder="e.g., Personal Finance 2025"
+          placeholder="e.g., Income Salary"
           variant="outlined"
           :disabled="submitting"
           autofocus
@@ -94,10 +104,23 @@ watch(() => props.modelValue, (newVal) => {
               color="success"
               hide-details
               inset
-              :disabled="submitting"
+              :disabled="submitting || isEditMode"
             />
           </div>
         </VCard>
+
+        <!-- Edit Mode Warning -->
+        <VAlert
+          v-if="isEditMode"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          <span class="text-caption">
+            Investment tracking cannot be changed after creation.
+          </span>
+        </VAlert>
 
         <!-- Info Message -->
         <VAlert
@@ -135,7 +158,7 @@ watch(() => props.modelValue, (newVal) => {
           :disabled="!bookName.trim() || submitting"
           class="text-none px-5"
         >
-          Create Book
+          {{ isEditMode ? 'Update' : 'Create Book' }}
         </VBtn>
       </VCardActions>
     </VCard>

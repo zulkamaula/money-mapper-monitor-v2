@@ -1,15 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useUser, useAuth } from '@clerk/vue'
-import type { MoneyBook, Pocket, Allocation } from '~/types/models'
-
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
-
-const { user } = useUser()
-const { getToken } = useAuth()
 
 // Use composables for state management
 const { selectedBook } = useMoneyBooks()
@@ -22,6 +15,13 @@ const { selectedBook } = useMoneyBooks()
       <VRow class="mb-6" justify="center">
         <VCol cols="12">
           <LazyMoneyBookSelector />
+        </VCol>
+      </VRow>
+
+      <!-- Investment Portfolio (Conditional - only if enabled) -->
+      <VRow v-if="selectedBook?.has_investment_portfolio" class="mb-6">
+        <VCol cols="12">
+          <LazyInvestmentPortfolio />
         </VCol>
       </VRow>
 

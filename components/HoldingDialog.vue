@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput } from '~/utils/format'
+import { formatNumberInput, parseNumberInput, formatCurrency } from '~/utils/format'
 import type { Holding } from '~/types/models'
 
 const props = defineProps<{
@@ -13,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const { createHolding, updateHolding } = useInvestments()
+const { allocations } = useAllocations()
 const { success: showSuccess, error: showError } = useNotification()
 
 const dialog = computed({
@@ -31,7 +32,8 @@ const form = ref({
   current_value: 0,
   quantity: undefined as number | undefined,
   average_price: undefined as number | undefined,
-  notes: ''
+  notes: '',
+  linked_allocation_id: undefined as string | undefined
 })
 
 const assetTypes = [
@@ -61,6 +63,14 @@ function handleCurrentInput(event: Event) {
   currentDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
 }
 
+const allocationItems = computed(() => [
+  { value: undefined, title: 'None (No Link)' },
+  ...allocations.value.map(alloc => ({
+    value: alloc.id,
+    title: `${new Date(alloc.created_at).toLocaleDateString()} - ${formatCurrency(alloc.source_amount)}`
+  }))
+])
+
 function resetForm() {
   form.value = {
     asset_type: 'gold',
@@ -71,7 +81,8 @@ function resetForm() {
     current_value: 0,
     quantity: undefined,
     average_price: undefined,
-    notes: ''
+    notes: '',
+    linked_allocation_id: undefined
   }
   initialDisplay.value = ''
   currentDisplay.value = ''
@@ -124,7 +135,8 @@ watch(() => props.modelValue, (newVal) => {
       current_value: props.holding.current_value,
       quantity: props.holding.quantity,
       average_price: props.holding.average_price,
-      notes: props.holding.notes || ''
+      notes: props.holding.notes || '',
+      linked_allocation_id: props.holding.linked_allocation_id || undefined
     }
     initialDisplay.value = formatNumberInput(props.holding.initial_investment)
     currentDisplay.value = formatNumberInput(props.holding.current_value)
@@ -242,6 +254,22 @@ watch(() => props.modelValue, (newVal) => {
               prefix="Rp"
               :disabled="submitting"
             />
+          </VCol>
+
+          <!-- Linked Allocation -->
+          <VCol cols="12">
+            <VSelect
+              v-model="form.linked_allocation_id"
+              label="Link to Budget Allocation (Optional)"
+              :items="allocationItems"
+              variant="outlined"
+              :disabled="submitting"
+              clearable
+            >
+              <template v-slot:prepend-inner>
+                <VIcon icon="mdi-link-variant" size="20" />
+              </template>
+            </VSelect>
           </VCol>
 
           <!-- Notes -->

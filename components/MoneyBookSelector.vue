@@ -7,11 +7,10 @@ const { success: showSuccess, error: showError } = useNotification()
 const { showDialog } = useConfirmDialog()
 
 // Local UI state
-const editingBook = ref<string | null>(null)
-const editingBookName = ref('')
+const editingBook = ref<MoneyBook | undefined>(undefined)
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
 const isInitialized = ref(false)
-const isUpdating = ref(false)
 
 // Computed
 const hasBooks = computed(() => books.value.length > 0)
@@ -50,30 +49,21 @@ function openCreateDialog() {
 
 function startEdit(book: MoneyBook, event?: Event) {
   if (event) event.stopPropagation()
-  editingBook.value = book.id
-  editingBookName.value = book.name
+  editingBook.value = book
+  showEditDialog.value = true
 }
 
-function cancelEdit() {
-  editingBook.value = null
-  editingBookName.value = ''
-}
-
-async function saveEdit(book: MoneyBook) {
-  if (!editingBookName.value.trim() || editingBookName.value === book.name) {
-    cancelEdit()
-    return
-  }
+async function handleEditConfirm(data: { name: string, hasInvestmentPortfolio: boolean }) {
+  if (!editingBook.value) return
   
-  isUpdating.value = true
   try {
-    await updateBook(book.id, editingBookName.value.trim())
-    showSuccess(`"${editingBookName.value.trim()}" updated successfully`)
-    cancelEdit()
+    await updateBook(editingBook.value.id, data.name)
+    showSuccess(`"${data.name}" updated successfully`)
+    showEditDialog.value = false
+    editingBook.value = undefined
   } catch (error) {
     showError('Failed to update money book')
-  } finally {
-    isUpdating.value = false
+    throw error
   }
 }
 
@@ -194,7 +184,7 @@ function onDragEnd() {
                   v-for="(book, index) in localBooks" 
                   :key="book.id" 
                   class="book-item"
-                  :draggable="editingBook !== book.id"
+                  draggable="true"
                   :class="{ 'drag-over': dragOverIndex === index, 'dragging': draggedIndex === index }"
                   @dragstart="onDragStart(index)"
                   @dragover="onDragOver($event, index)"
@@ -202,20 +192,7 @@ function onDragEnd() {
                   @drop="onDrop($event, index)"
                   @dragend="onDragEnd"
                 >
-                  <!-- Edit Mode -->
-                  <VTextField v-if="editingBook === book.id" v-model="editingBookName" variant="outlined"
-                    density="compact" hide-details class="edit-input" autofocus 
-                    :disabled="isUpdating" :loading="isUpdating"
-                    @keyup.enter="saveEdit(book)"
-                    @keyup.esc="cancelEdit">
-                    <template v-slot:append-inner>
-                      <VBtn icon="mdi-check" size="x-small" color="success" variant="text" @click="saveEdit(book)" />
-                      <VBtn icon="mdi-close" size="x-small" color="grey" variant="text" @click="cancelEdit" />
-                    </template>
-                  </VTextField>
-
-                  <!-- Display Mode -->
-                  <VChip v-else :color="selectedBook?.id === book.id ? 'primary' : 'grey'" @click="handleSelect(book)"
+                  <VChip :color="selectedBook?.id === book.id ? 'primary' : 'grey'" @click="handleSelect(book)"
                     class="book-chip" :variant="selectedBook?.id === book.id ? 'flat' : 'outlined'">
                     <VIcon icon="mdi-drag-vertical" size="small" class="drag-handle desktop-only mr-1" />
                     {{ book.name }}
@@ -230,10 +207,7 @@ function onDragEnd() {
                         </VListItem>
                         <VDivider />
                         <VListItem @click="handleDelete(book)">
-                          <template v-slot:prepend>
-                            <VIcon icon="mdi-delete" color="error" />
-                          </template>
-                          <VListItemTitle class="text-error font-weight-medium">
+                          <VListItemTitle class="text-error font-weight-semibold">
                             Delete
                           </VListItemTitle>
                         </VListItem>
@@ -268,9 +242,15 @@ function onDragEnd() {
     </template>
 
     <!-- Create Book Dialog -->
-    <CreateBookDialog
-      v-model="showCreateDialog"
+    <CreateBookDialog 
+      v-model="showCreateDialog" 
       @confirm="handleCreateConfirm"
+    />
+    
+    <CreateBookDialog 
+      v-model="showEditDialog"
+      :book="editingBook"
+      @confirm="handleEditConfirm"
     />
   </div>
 </template>

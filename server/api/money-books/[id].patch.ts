@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
     UPDATE public.money_books
     SET name = ${name}
     WHERE id = ${bookId}
-    RETURNING id, name, created_at, order_index
+    RETURNING id, name, has_investment_portfolio, created_at, order_index
   `
 
   return rows[0]

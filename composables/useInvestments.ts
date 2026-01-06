@@ -49,6 +49,23 @@ export const useInvestments = () => {
     return grouped
   })
 
+  // Asset allocation data for chart
+  const assetAllocationData = computed(() => {
+    const allocation: Record<string, { name: string; value: number }> = {}
+    
+    holdings.value.forEach(holding => {
+      const type = (holding as any).asset_type
+      const name = (holding as any).asset_name
+      
+      if (!allocation[type]) {
+        allocation[type] = { name, value: 0 }
+      }
+      allocation[type].value += holding.current_value
+    })
+    
+    return allocation
+  })
+
   // Load portfolio and holdings
   async function loadInvestments(bookId: string) {
     // Cancel previous request if exists
@@ -209,6 +226,7 @@ export const useInvestments = () => {
     totalProfit,
     profitPercentage,
     holdingsByAsset,
+    assetAllocationData,
     
     // Methods
     loadInvestments,
