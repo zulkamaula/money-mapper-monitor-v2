@@ -26,16 +26,8 @@ const creatingBook = ref(false)
 // Dialog state
 const showAllocationDialog = ref(false)
 
-// Notification state
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'success'
-})
-
-function showNotification(message: string, color: 'success' | 'error' | 'info' = 'success') {
-  snackbar.value = { show: true, message, color }
-}
+// Use modular notification system
+const { success: showSuccess, error: showError } = useNotification()
 
 // Watch for user authentication - reactive approach
 watch(
@@ -149,9 +141,10 @@ async function handleCreateBook(name: string) {
 
     moneyBooks.value.unshift(newBook)
     await selectBook(newBook)
-    console.log('Book created:', newBook.name)
+    showSuccess(`"${newBook.name}" created successfully`)
   } catch (error) {
     console.error('Failed to create book:', error)
+    showError('Failed to create money book')
   } finally {
     creatingBook.value = false
   }
@@ -175,9 +168,10 @@ async function handleUpdateBook(book: MoneyBook, name: string) {
         selectedBook.value = updatedBook
       }
     }
-    console.log('Book updated:', updatedBook.name)
+    showSuccess(`"${updatedBook.name}" updated successfully`)
   } catch (error) {
     console.error('Failed to update book:', error)
+    showError('Failed to update money book')
   }
 }
 
@@ -197,17 +191,29 @@ async function handleReorderBooks(reorderedBooks: MoneyBook[]) {
       body: { bookIds }
     })
 
-    showNotification('Book order updated successfully', 'success')
+    showSuccess('Book order updated successfully')
   } catch (error) {
     console.error('Failed to reorder books:', error)
-    showNotification('Failed to reorder books', 'error')
+    showError('Failed to reorder books')
     // Reload books to restore correct order
     await loadMoneyBooks()
   }
 }
 
 async function handleDeleteBook(book: MoneyBook) {
-  if (!confirm(`Delete "${book.name}"? This will also delete all pockets and allocations.`)) return
+  const { showDialog } = useConfirmDialog()
+  
+  const confirmed = await showDialog({
+    title: 'Delete Money Book?',
+    message: `Are you sure you want to delete "${book.name}"? This will also permanently delete all pockets and allocations inside it.`,
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+  
+  if (!confirmed) return
 
   try {
     const token = await getToken.value()
@@ -229,9 +235,10 @@ async function handleDeleteBook(book: MoneyBook) {
         allocations.value = []
       }
     }
-    console.log('Book deleted:', book.name)
+    showSuccess(`"${book.name}" deleted successfully`)
   } catch (error) {
     console.error('Failed to delete book:', error)
+    showError('Failed to delete money book')
   }
 }
 
@@ -255,9 +262,10 @@ async function handleCreatePocket(pocketData: { name: string; percentage: number
     })
 
     pockets.value.push(newPocket)
-    console.log('Pocket created:', newPocket.name)
+    showSuccess(`"${newPocket.name}" created successfully`)
   } catch (error) {
     console.error('Failed to create pocket:', error)
+    showError('Failed to create pocket')
   }
 }
 
@@ -279,16 +287,29 @@ async function handleUpdatePocket(pocket: Pocket) {
     if (index !== -1) {
       pockets.value[index] = updatedPocket
     }
-    console.log('Pocket updated:', updatedPocket.name)
+    showSuccess(`"${updatedPocket.name}" updated successfully`)
   } catch (error) {
     console.error('Failed to update pocket:', error)
+    showError('Failed to update pocket')
   }
 }
 
 async function handleDeletePocket(pocketId: string) {
   const pocket = pockets.value.find(p => p.id === pocketId)
   if (!pocket) return
-  if (!confirm(`Delete pocket "${pocket.name}"?`)) return
+  
+  const { showDialog } = useConfirmDialog()
+  const confirmed = await showDialog({
+    title: 'Delete Pocket?',
+    message: `Are you sure you want to delete "${pocket.name}"?`,
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+  
+  if (!confirmed) return
 
   try {
     const token = await getToken.value()
@@ -300,9 +321,10 @@ async function handleDeletePocket(pocketId: string) {
     })
 
     pockets.value = pockets.value.filter(p => p.id !== pocketId)
-    console.log('Pocket deleted:', pocket.name)
+    showSuccess(`"${pocket.name}" deleted successfully`)
   } catch (error) {
     console.error('Failed to delete pocket:', error)
+    showError('Failed to delete pocket')
   }
 }
 
@@ -336,14 +358,26 @@ async function handleCreateAllocation(data: { sourceAmount: number; date: string
 
     allocations.value.unshift(newAllocation)
     showAllocationDialog.value = false
-    console.log('Allocation created:', newAllocation.id)
+    showSuccess('Allocation created successfully')
   } catch (error) {
     console.error('Failed to create allocation:', error)
+    showError('Failed to create allocation')
   }
 }
 
 async function handleDeleteAllocation(id: string) {
-  if (!confirm('Delete this allocation?')) return
+  const { showDialog } = useConfirmDialog()
+  const confirmed = await showDialog({
+    title: 'Delete Allocation?',
+    message: 'Are you sure you want to delete this allocation? This action cannot be undone.',
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+  
+  if (!confirmed) return
 
   try {
     const token = await getToken.value()
@@ -355,9 +389,10 @@ async function handleDeleteAllocation(id: string) {
     })
 
     allocations.value = allocations.value.filter(a => a.id !== id)
-    console.log('Allocation deleted')
+    showSuccess('Allocation deleted successfully')
   } catch (error) {
     console.error('Failed to delete allocation:', error)
+    showError('Failed to delete allocation')
   }
 }
 </script>
@@ -415,16 +450,9 @@ async function handleDeleteAllocation(id: string) {
       @save="handleCreateAllocation"
     />
 
-    <!-- Notification Snackbar -->
-    <VSnackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="3000"
-      location="top"
-      rounded="pill"
-    >
-      {{ snackbar.message }}
-    </VSnackbar>
+    <!-- Modular Components -->
+    <AppNotification />
+    <ConfirmDialog />
   </div>
 </template>
 
