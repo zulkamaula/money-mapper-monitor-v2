@@ -87,6 +87,13 @@ export default defineNuxtPlugin((nuxtApp) => {
         },
       },
     },
+    defaults: {
+      global: {
+        font: {
+          family: 'Poppins, sans-serif',
+        },
+      },
+    },
   })
 
   nuxtApp.vueApp.use(vuetify)

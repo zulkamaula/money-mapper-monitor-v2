@@ -14,6 +14,9 @@ importers:
       '@clerk/vue':
         specifier: ^1.17.6
         version: 1.17.6(react@19.2.3)(vue@3.5.26)
+      '@fontsource/poppins':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
@@ -546,6 +549,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource/poppins@5.2.7':
+    resolution: {integrity: sha512-6uQyPmseo4FgI97WIhA4yWRlNaoLk4vSDK/PyRwdqqZb5zAEuc+Kunt8JTMcsHYUEGYBtN15SNkMajMdqUSUmg==}
 
   '@ioredis/commands@1.4.0':
     resolution: {integrity: sha512-aFT2yemJJo+TZCmieA7qnYGQooOS7QfNmYrzGtsYd3g9j5iDP8AimYYAesf79ohjbLG12XxC4nG5DyEnC88AsQ==}
@@ -3877,6 +3883,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.2':
     optional: true
+
+  '@fontsource/poppins@5.2.7': {}
 
   '@ioredis/commands@1.4.0': {}
 

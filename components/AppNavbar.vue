@@ -105,7 +105,7 @@ async function handleLogout() {
   font-size: 20px;
   font-weight: 700;
   color: #0f766e;
-  line-height: 1.2;
+  line-height: 1.5;
   letter-spacing: -0.02em;
 }
 
@@ -113,7 +113,7 @@ async function handleLogout() {
   font-size: .6rem;
   font-weight: 500;
   color: #0891b2;
-  letter-spacing: 0.5px;
+  letter-spacing: .5px;
   text-transform: uppercase;
 }
 

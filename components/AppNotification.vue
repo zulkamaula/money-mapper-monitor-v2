@@ -38,6 +38,7 @@ const notificationConfig = computed(() => {
     :timeout="state.timeout"
     location="top"
     class="app-snackbar"
+    :style="{ '--timeout': `${state.timeout}ms` }"
   >
     <div class="notification-content" :style="{
       backgroundColor: notificationConfig.bgColor,
@@ -48,6 +49,9 @@ const notificationConfig = computed(() => {
       <div class="notification-message">{{ state.message }}</div>
       <VBtn icon="mdi-close" size="small" variant="text" @click="hide"
         class="notification-close" :style="{ color: notificationConfig.textColor }" />
+      
+      <!-- Auto-close progress indicator -->
+      <div class="progress-bar" :style="{ backgroundColor: notificationConfig.borderColor }"></div>
     </div>
   </VSnackbar>
 </template>
@@ -72,6 +76,8 @@ const notificationConfig = computed(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
   animation: slideInDown 0.3s ease-out;
+  position: relative;
+  overflow: hidden;
 }
 
 .notification-message {
@@ -88,6 +94,25 @@ const notificationConfig = computed(() => {
 
 .notification-close:hover {
   opacity: 1;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  opacity: 0.3;
+  animation: shrinkWidth var(--timeout, 3000ms) linear forwards;
+}
+
+@keyframes shrinkWidth {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
 
 @keyframes slideInDown {

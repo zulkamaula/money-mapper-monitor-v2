@@ -43,7 +43,7 @@ export const useNotification = () => {
   }
 
   return {
-    state: readonly(state),
+    state,
     showNotification,
     success,
     error,

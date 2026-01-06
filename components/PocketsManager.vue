@@ -1,21 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
 import type { Pocket } from '~/types/models'
 import { formatPercentage } from '~/utils/format'
 
-interface Props {
-  pockets: Pocket[]
-  loading?: boolean
-}
+// Self-contained - use composables
+const { selectedBook } = useMoneyBooks()
+const { pockets, loading, loadPockets, createPocket, updatePocket, deletePocket } = usePockets()
+const { success: showSuccess, error: showError } = useNotification()
+const { showDialog: showConfirmDialog } = useConfirmDialog()
 
-interface Emits {
-  (e: 'create', pocket: { name: string; percentage: number }): void
-  (e: 'update', pocket: Pocket): void
-  (e: 'delete', pocketId: string): void
-}
+// Initialize on mount
+onMounted(async () => {
+  if (selectedBook.value) {
+    await loadPockets()
+  }
+})
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+// Reload when selected book changes
+watch(() => selectedBook.value, async (newBook) => {
+  if (newBook) {
+    await loadPockets()
+  }
+}, { immediate: true })
 
 const showDialog = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
@@ -24,7 +29,7 @@ const pocketData = ref({ name: '', percentage: 0 })
 const isExpanded = ref(false)
 
 const totalPercentage = computed(() => {
-  return props.pockets.reduce((sum, p) => {
+  return pockets.value.reduce((sum, p) => {
     const percentage = typeof p.percentage === 'string' ? parseFloat(p.percentage) : p.percentage
     return sum + percentage
   }, 0)
@@ -45,7 +50,7 @@ const canAddPocket = computed(() => {
   // For edit mode, exclude the current pocket's percentage
   const currentTotal = dialogMode.value === 'edit' && editingPocketId.value
     ? (() => {
-        const pocket = props.pockets.find(p => p.id === editingPocketId.value)
+        const pocket = pockets.value.find(p => p.id === editingPocketId.value)
         const pocketPercentage = pocket ? (typeof pocket.percentage === 'string' ? parseFloat(pocket.percentage) : pocket.percentage) : 0
         return totalPercentage.value - pocketPercentage
       })()
@@ -57,7 +62,7 @@ const canAddPocket = computed(() => {
 const remainingPercentage = computed(() => {
   const currentTotal = dialogMode.value === 'edit' && editingPocketId.value
     ? (() => {
-        const pocket = props.pockets.find(p => p.id === editingPocketId.value)
+        const pocket = pockets.value.find(p => p.id === editingPocketId.value)
         const pocketPercentage = pocket ? (typeof pocket.percentage === 'string' ? parseFloat(pocket.percentage) : pocket.percentage) : 0
         return totalPercentage.value - pocketPercentage
       })()
@@ -75,31 +80,57 @@ function openDialog() {
 function openEditDialog(pocket: Pocket) {
   dialogMode.value = 'edit'
   editingPocketId.value = pocket.id
-  pocketData.value = { name: pocket.name, percentage: pocket.percentage }
+  pocketData.value = { 
+    name: pocket.name, 
+    percentage: typeof pocket.percentage === 'string' ? parseFloat(pocket.percentage) : pocket.percentage 
+  }
   showDialog.value = true
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!pocketData.value.name.trim() || pocketData.value.percentage <= 0 || !canAddPocket.value) {
     return
   }
 
-  if (dialogMode.value === 'create') {
-    emit('create', { ...pocketData.value })
-  } else if (editingPocketId.value) {
-    const pocket = props.pockets.find(p => p.id === editingPocketId.value)
-    if (pocket) {
-      emit('update', { ...pocket, name: pocketData.value.name, percentage: pocketData.value.percentage })
+  try {
+    if (dialogMode.value === 'create') {
+      await createPocket(pocketData.value.name, pocketData.value.percentage)
+      showSuccess(`"${pocketData.value.name}" created successfully`)
+    } else if (editingPocketId.value) {
+      await updatePocket(editingPocketId.value, pocketData.value.name, pocketData.value.percentage)
+      showSuccess(`"${pocketData.value.name}" updated successfully`)
     }
-  }
 
-  showDialog.value = false
-  pocketData.value = { name: '', percentage: 0 }
-  editingPocketId.value = null
+    showDialog.value = false
+    pocketData.value = { name: '', percentage: 0 }
+    editingPocketId.value = null
+  } catch (error) {
+    showError(dialogMode.value === 'create' ? 'Failed to create pocket' : 'Failed to update pocket')
+  }
 }
 
-function handleDelete(pocketId: string) {
-  emit('delete', pocketId)
+async function handleDelete(pocketId: string) {
+  const pocket = pockets.value.find(p => p.id === pocketId)
+  if (!pocket) return
+
+  const confirmed = await showConfirmDialog({
+    title: 'Delete Pocket?',
+    message: `Are you sure you want to delete "${pocket.name}"?`,
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+
+  if (!confirmed) return
+
+  try {
+    await deletePocket(pocketId)
+    showSuccess(`"${pocket.name}" deleted successfully`)
+  } catch (error) {
+    showError('Failed to delete pocket')
+  }
 }
 </script>
 

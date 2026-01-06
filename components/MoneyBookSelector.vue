@@ -1,56 +1,49 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
 import type { MoneyBook } from '~/types/models'
 
-interface Props {
-  books: MoneyBook[]
-  selectedBook: MoneyBook | null
-  loading?: boolean
-  creatingBook?: boolean
-}
+// Self-contained - use composables instead of props/emits
+const { books, selectedBook, loading, creating, loadBooks, selectBook, createBook, updateBook, deleteBook, reorderBooks } = useMoneyBooks()
+const { success: showSuccess, error: showError } = useNotification()
+const { showDialog } = useConfirmDialog()
 
-interface Emits {
-  (e: 'select', book: MoneyBook): void
-  (e: 'create', name: string): void
-  (e: 'update', book: MoneyBook, name: string): void
-  (e: 'delete', book: MoneyBook): void
-  (e: 'reorder', books: MoneyBook[]): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
+// Local UI state
 const newBookName = ref('')
 const editingBook = ref<string | null>(null)
 const editingBookName = ref('')
-const showSelector = ref(props.books.length > 0)
 const showCreateDialog = ref(false)
-
-// Track initialization to prevent empty state flash
 const isInitialized = ref(false)
-const hasBooks = computed(() => props.books.length > 0)
+const isUpdating = ref(false)
+
+// Computed
+const hasBooks = computed(() => books.value.length > 0)
 
 // Drag and drop state (desktop only)
 const localBooks = ref<MoneyBook[]>([])
 const draggedIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
 
-// Mark as initialized when books data changes (after first fetch)
-watch(() => props.books, (newBooks) => {
+// Initialize on mount
+onMounted(async () => {
+  await loadBooks()
   isInitialized.value = true
-  localBooks.value = [...newBooks]
-}, { immediate: true }) // Sync props to local state
-
-// Cleanup
-onUnmounted(() => {
-  isInitialized.value = false
 })
 
-function handleCreate() {
+// Sync books to local state for drag-drop
+watch(() => books.value, (newBooks) => {
+  localBooks.value = [...newBooks]
+}, { immediate: true, deep: true })
+
+async function handleCreate() {
   if (!newBookName.value.trim()) return
-  emit('create', newBookName.value.trim())
-  newBookName.value = ''
-  showCreateDialog.value = false
+  
+  try {
+    await createBook(newBookName.value.trim())
+    showSuccess(`"${newBookName.value.trim()}" created successfully`)
+    newBookName.value = ''
+    showCreateDialog.value = false
+  } catch (error) {
+    showError('Failed to create money book')
+  }
 }
 
 function openCreateDialog() {
@@ -69,22 +62,49 @@ function cancelEdit() {
   editingBookName.value = ''
 }
 
-function saveEdit(book: MoneyBook) {
+async function saveEdit(book: MoneyBook) {
   if (!editingBookName.value.trim() || editingBookName.value === book.name) {
     cancelEdit()
     return
   }
-  emit('update', book, editingBookName.value.trim())
-  cancelEdit()
+  
+  isUpdating.value = true
+  try {
+    await updateBook(book.id, editingBookName.value.trim())
+    showSuccess(`"${editingBookName.value.trim()}" updated successfully`)
+    cancelEdit()
+  } catch (error) {
+    showError('Failed to update money book')
+  } finally {
+    isUpdating.value = false
+  }
 }
 
 function handleSelect(book: MoneyBook) {
-  emit('select', book)
+  selectBook(book)
 }
 
-function handleDelete(book: MoneyBook, event?: Event) {
+async function handleDelete(book: MoneyBook, event?: Event) {
   if (event) event.stopPropagation()
-  emit('delete', book)
+  
+  const confirmed = await showDialog({
+    title: 'Delete Money Book?',
+    message: `Are you sure you want to delete "${book.name}"? This will also permanently delete all pockets and allocations inside it.`,
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+  
+  if (!confirmed) return
+  
+  try {
+    await deleteBook(book.id)
+    showSuccess(`"${book.name}" deleted successfully`)
+  } catch (error) {
+    showError('Failed to delete money book')
+  }
 }
 
 // Drag and drop handlers
@@ -101,7 +121,7 @@ function onDragLeave() {
   dragOverIndex.value = null
 }
 
-function onDrop(event: DragEvent, dropIndex: number) {
+async function onDrop(event: DragEvent, dropIndex: number) {
   event.preventDefault()
   
   if (draggedIndex.value === null || draggedIndex.value === dropIndex) {
@@ -124,7 +144,13 @@ function onDrop(event: DragEvent, dropIndex: number) {
   items.splice(dropIndex, 0, draggedItem)
   
   localBooks.value = items
-  emit('reorder', items)
+  
+  try {
+    await reorderBooks(items)
+    showSuccess('Book order updated successfully')
+  } catch (error) {
+    showError('Failed to reorder books')
+  }
   
   // Reset state
   draggedIndex.value = null
@@ -171,7 +197,7 @@ function onDragEnd() {
             <!-- Create New Book (Top) -->
             <div class="create-section">
               <VTextField v-model="newBookName" variant="outlined" density="comfortable" placeholder="New book name"
-                color="primary" hide-details class="create-input" :loading="creatingBook" autofocus
+                color="primary" hide-details class="create-input" :loading="creating" autofocus
                 @keyup.enter="handleCreate">
                 <template #append-inner>
                   <VBtn icon="mdi-book-plus" color="primary" variant="plain" class="pa-0 h-auto w-auto"
@@ -197,7 +223,9 @@ function onDragEnd() {
                 >
                   <!-- Edit Mode -->
                   <VTextField v-if="editingBook === book.id" v-model="editingBookName" variant="outlined"
-                    density="compact" hide-details class="edit-input" autofocus @keyup.enter="saveEdit(book)"
+                    density="compact" hide-details class="edit-input" autofocus 
+                    :disabled="isUpdating" :loading="isUpdating"
+                    @keyup.enter="saveEdit(book)"
                     @keyup.esc="cancelEdit">
                     <template v-slot:append-inner>
                       <VBtn icon="mdi-check" size="x-small" color="success" variant="text" @click="saveEdit(book)" />
@@ -246,13 +274,13 @@ function onDragEnd() {
         <VCardText class="pa-6">
           <div class="create-form">
             <VTextField v-model="newBookName" variant="outlined" placeholder="Money Book Name" color="primary" autofocus
-              hide-details :loading="creatingBook" @keyup.enter="handleCreate" class="flex-1">
+              hide-details :loading="creating" @keyup.enter="handleCreate" class="flex-1">
               <template v-slot:prepend-inner>
                 <VIcon icon="mdi-book-outline" />
               </template>
             </VTextField>
             <VBtn variant="tonal" color="primary" size="large" @click="handleCreate"
-              :disabled="!newBookName.trim() || creatingBook" :loading="creatingBook">
+              :disabled="!newBookName.trim() || creating" :loading="creating">
               Next
               <VIcon icon="mdi-arrow-right" end />
             </VBtn>
@@ -421,7 +449,7 @@ function onDragEnd() {
 }
 
 .book-chip {
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;

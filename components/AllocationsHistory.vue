@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { Allocation, Pocket } from '~/types/models'
+import type { Allocation } from '~/types/models'
 import { formatPercentage, formatCurrency, formatDate } from '~/utils/format'
 
-interface Props {
-  allocations: Allocation[]
-  pockets: Pocket[]
-  loading?: boolean
-}
+// Self-contained - use composables
+const { selectedBook } = useMoneyBooks()
+const { pockets } = usePockets()
+const { allocations, loading, loadAllocations, deleteAllocation } = useAllocations()
+const { success: showSuccess, error: showError } = useNotification()
+const { showDialog: showConfirmDialog } = useConfirmDialog()
 
-interface Emits {
-  (e: 'create'): void
-  (e: 'delete', id: string): void
-}
+// Initialize on mount
+onMounted(async () => {
+  if (selectedBook.value) {
+    await loadAllocations()
+  }
+})
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+// Reload when selected book changes
+watch(() => selectedBook.value, async (newBook) => {
+  if (newBook) {
+    await loadAllocations()
+  }
+}, { immediate: true })
 
 const expandedAllocation = ref<string | null>(null)
 const copiedAmount = ref<string | null>(null)
@@ -26,7 +32,7 @@ function toggleCardExpand() {
 }
 
 const recentAllocations = computed(() => {
-  return props.allocations.slice(0, 10)
+  return allocations.value.slice(0, 10)
 })
 
 function toggleExpand(id: string) {
@@ -37,28 +43,55 @@ async function copyAmount(amount: number, itemId: string) {
   try {
     await navigator.clipboard.writeText(amount.toString())
     copiedAmount.value = itemId
+    showSuccess(`Copied: ${formatCurrency(amount)}`)
     setTimeout(() => {
       copiedAmount.value = null
     }, 2000)
   } catch (error) {
     console.error('Failed to copy:', error)
+    showError('Failed to copy to clipboard')
   }
 }
+
+// Emit create event for parent to handle dialog
+const emit = defineEmits<{
+  (e: 'create'): void
+}>()
 
 function handleCreate() {
   emit('create')
 }
 
-function handleDelete(id: string) {
-  emit('delete', id)
+async function handleDelete(id: string) {
+  const allocation = allocations.value.find(a => a.id === id)
+  if (!allocation) return
+
+  const confirmed = await showConfirmDialog({
+    title: 'Delete Allocation?',
+    message: `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`,
+    icon: 'mdi-delete-alert',
+    iconColor: 'error',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    confirmColor: 'error'
+  })
+
+  if (!confirmed) return
+
+  try {
+    await deleteAllocation(id)
+    showSuccess('Allocation deleted successfully')
+  } catch (error) {
+    showError('Failed to delete allocation')
+  }
 }
 </script>
 
 <template>
   <VCard class="allocations-card" elevation="0">
     <VCardTitle class="card-header pa-5" @click="toggleCardExpand">
-      <div class="header-content">
-        <div class="title-section">
+      <div class="d-flex align-center justify-space-between w-100">
+        <div class="flex-grow-1">
           <div class="d-flex align-center text-wrap text-body-1 text-sm-h6">
             <VIcon icon="mdi-chart-arc" class="mr-2" color="success" />
             Recent Allocations
@@ -103,10 +136,10 @@ function handleDelete(id: string) {
         <VList v-else class="allocation-list">
           <VListItem v-for="allocation in recentAllocations" :key="allocation.id" class="allocation-item mb-3">
             <div class="allocation-card">
-              <div class="allocation-header" @click="toggleExpand(allocation.id)">
+              <div class="d-flex justify-space-between align-center cursor-pointer" @click="toggleExpand(allocation.id)">
                 <div>
-                  <div class="allocation-amount">{{ formatCurrency(allocation.source_amount) }}</div>
-                  <div class="allocation-date">{{ formatDate(allocation.date) }}</div>
+                  <div class="text-body-1 font-weight-semibold text-primary mb-1">{{ formatCurrency(allocation.source_amount) }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ formatDate(allocation.date) }}</div>
                 </div>
                 <VIcon :icon="expandedAllocation === allocation.id ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
               </div>
@@ -115,28 +148,30 @@ function handleDelete(id: string) {
               <Transition name="expand">
                 <div v-if="expandedAllocation === allocation.id" class="allocation-details">
                   <VDivider class="my-3" />
-                  <div class="details-list">
-                    <div v-for="item in allocation.allocation_items" :key="item.id" class="detail-item">
-                      <div class="detail-info">
-                        <div class="detail-percentage rounded-pill">{{ formatPercentage(item.pocket_percentage) }}
-                        </div>
-                        <div class="detail-name text-wrap w-100 w-sm-auto">{{ item.pocket_name }}</div>
+                  <div class="d-flex flex-column ga-3">
+                    <div v-for="item in allocation.allocation_items" :key="item.id" 
+                      class="d-flex flex-wrap justify-space-between align-center ga-2 pa-3 bg-white rounded">
+                      <div class="d-flex align-center flex-wrap ga-2">
+                        <VChip size="x-small" color="primary" variant="tonal" class="font-weight-medium">
+                          {{ formatPercentage(item.pocket_percentage) }}
+                        </VChip>
+                        <div class="text-body-2 font-weight-semibold text-primary text-wrap w-100 w-sm-auto">{{ item.pocket_name }}</div>
                       </div>
-                      <div class="detail-amount-group">
-                        <div class="detail-amount">{{ formatCurrency(item.amount) }}</div>
+                      <div class="d-flex align-center justify-end flex-grow-1 ga-2">
+                        <div class="text-body-2 font-weight-semibold text-primary">{{ formatCurrency(item.amount) }}</div>
                         <VBtn :icon="copiedAmount === item.id ? 'mdi-check' : 'mdi-content-copy'" size="x-small"
                           variant="text" :color="copiedAmount === item.id ? 'success' : 'grey'"
                           @click="copyAmount(item.amount, item.id)" />
                       </div>
                     </div>
                   </div>
-                  <div v-if="allocation.notes" class="notes-section">
+                  <div v-if="allocation.notes" class="mt-3 pa-3 bg-white rounded d-flex align-start ga-1">
                     <VIcon icon="mdi-note-text" size="small" class="mr-2" color="primary" />
-                    <span class="notes-text">{{ allocation.notes }}</span>
+                    <span class="text-caption text-medium-emphasis">{{ allocation.notes }}</span>
                   </div>
 
                   <!-- Delete Button -->
-                  <div class="delete-section mt-3">
+                  <div class="d-flex justify-end mt-3 pt-2" style="border-top: 1px dashed rgba(15, 118, 110, 0.2)">
                     <VBtn color="error" variant="tonal" size="small" prepend-icon="mdi-delete" class="text-none"
                       rounded="pill" @click.stop="handleDelete(allocation.id)">
                       Delete Allocation
@@ -165,19 +200,6 @@ function handleDelete(id: string) {
 
 .card-header {
   user-select: none;
-  padding: 20px;
-  padding-bottom: 16px;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.title-section {
-  flex: 1;
 }
 
 .allocations-content {
@@ -199,28 +221,15 @@ function handleDelete(id: string) {
   border-bottom-right-radius: 35px;
 }
 
-/* Mobile: Collapsible content with max-height and smaller text */
+/* Mobile: Collapsible content with max-height */
 @media (max-width: 959px) {
   .allocations-content {
     transition: all 0.3s ease;
     max-height: 400px;
-    font-size: 0.875rem;
   }
 
   .allocation-item {
     padding: 12px !important;
-  }
-
-  .allocation-amount {
-    font-size: 1rem;
-  }
-
-  .detail-name {
-    font-size: 0.875rem;
-  }
-
-  .detail-amount {
-    font-size: 0.875rem;
   }
 }
 
@@ -274,105 +283,8 @@ function handleDelete(id: string) {
   border-color: rgba(15, 118, 110, 0.2);
 }
 
-.allocation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-
-.allocation-amount {
-  font-size: 1rem;
-  font-weight: 700;
-  color: rgba(15, 118, 110, 0.9);
-  margin-bottom: 4px;
-}
-
-.allocation-date {
-  font-size: 0.7rem;
-  color: rgba(0, 0, 0, 0.5);
-}
-
-.allocation-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .allocation-details {
   overflow: hidden;
-}
-
-.details-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detail-item {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 5px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
-}
-
-.detail-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.detail-name {
-  font-weight: 600;
-  color: rgba(15, 118, 110, 0.9);
-}
-
-.detail-percentage {
-  font-size: 12px;
-  padding: 2px 8px;
-  background: rgba(15, 118, 110, 0.1);
-  color: rgba(15, 118, 110, 0.9);
-}
-
-.detail-amount-group {
-  display: flex;
-  align-items: center;
-  justify-content: end;
-  flex-grow: 1;
-  gap: 8px;
-}
-
-.detail-amount {
-  font-weight: 700;
-  color: rgba(15, 118, 110, 0.9);
-}
-
-.notes-section {
-  margin-top: 12px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.notes-text {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.7);
-  line-height: 1.4;
-}
-
-.delete-section {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(15, 118, 110, 0.2);
 }
 
 .empty-state {
@@ -381,6 +293,10 @@ function handleDelete(id: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 
 .subtitle-stats {
