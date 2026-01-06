@@ -4,9 +4,9 @@ import { sql } from '../utils/db';
 
 export default defineEventHandler(async (event) => {
   const { userId } = requireAuth(event);
-  const body = await readBody<{ name: string; hasInvestmentPortfolio?: boolean }>(event);
+  const body = await readBody<{ name: string; has_investment_portfolio?: boolean }>(event);
   const name = String(body?.name || '').trim();
-  const hasInvestmentPortfolio = Boolean(body?.hasInvestmentPortfolio);
+  const hasInvestmentPortfolio = Boolean(body?.has_investment_portfolio);
   if (!name) throw createError({ status: 400, statusText: 'Name required' });
 
   const db = sql();

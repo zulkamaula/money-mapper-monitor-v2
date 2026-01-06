@@ -31,6 +31,17 @@ export const useInvestments = () => {
     return (totalProfit.value / totalInvested.value) * 100
   })
 
+  // Map asset types to display names
+  const assetTypeNames: Record<string, string> = {
+    gold: 'Emas',
+    stock: 'Saham',
+    etf: 'ETF',
+    mutual_fund: 'Reksadana',
+    bond: 'Obligasi',
+    crypto: 'Crypto',
+    other: 'Lainnya'
+  }
+
   // Group holdings by asset type
   const holdingsByAsset = computed(() => {
     const grouped: Record<string, { name: string; holdings: Holding[] }> = {}
@@ -39,7 +50,7 @@ export const useInvestments = () => {
       const key = (holding as any).asset_type
       if (!grouped[key]) {
         grouped[key] = {
-          name: (holding as any).asset_name,
+          name: assetTypeNames[key] || 'Unknown',
           holdings: []
         }
       }
@@ -55,10 +66,12 @@ export const useInvestments = () => {
     
     holdings.value.forEach(holding => {
       const type = (holding as any).asset_type
-      const name = (holding as any).asset_name
       
       if (!allocation[type]) {
-        allocation[type] = { name, value: 0 }
+        allocation[type] = { 
+          name: assetTypeNames[type] || 'Unknown', 
+          value: 0 
+        }
       }
       allocation[type].value += holding.current_value
     })

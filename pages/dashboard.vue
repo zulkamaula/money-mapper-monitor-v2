@@ -18,23 +18,41 @@ const { selectedBook } = useMoneyBooks()
         </VCol>
       </VRow>
 
-      <!-- Investment Portfolio (Conditional - only if enabled) -->
+      <!-- Investment Portfolio Summary (Full Width - only if enabled) -->
       <VRow v-if="selectedBook?.has_investment_portfolio" class="mb-6">
         <VCol cols="12">
-          <LazyInvestmentPortfolio />
+          <LazyPortfolioSummaryCard />
         </VCol>
       </VRow>
 
-      <!-- Bottom Row: Pockets + Allocations -->
+      <!-- Main Content: 3 Equal Columns or 2 Columns (Budget-only) -->
       <VRow v-if="selectedBook" class="dashboard-content-row">
-        <!-- Pockets Manager (Self-contained, no props needed) -->
-        <VCol cols="12" sm="12" md="4" class="dashboard-col">
+        <!-- Pockets Manager (1/3 or 1/3 of budget section) -->
+        <VCol 
+          cols="12" 
+          :md="selectedBook.has_investment_portfolio ? 4 : 4"
+          class="dashboard-col"
+        >
           <LazyPocketsManager />
         </VCol>
 
-        <!-- Allocations History (Self-contained with dialog) -->
-        <VCol cols="12" sm="12" md="8" class="dashboard-col">
+        <!-- Allocations History (1/3 or 2/3 of budget section) -->
+        <VCol 
+          cols="12" 
+          :md="selectedBook.has_investment_portfolio ? 4 : 8"
+          class="dashboard-col"
+        >
           <LazyAllocationsHistory />
+        </VCol>
+
+        <!-- Investment Holdings (1/3 - rightmost, only if enabled) -->
+        <VCol 
+          v-if="selectedBook.has_investment_portfolio" 
+          cols="12" 
+          md="4"
+          class="dashboard-col"
+        >
+          <LazyInvestmentPortfolio />
         </VCol>
       </VRow>
     </VContainer>
@@ -122,5 +140,15 @@ const { selectedBook } = useMoneyBooks()
     display: flex;
     flex-direction: row;
   }
+}
+
+/* Opacity effect for non-primary sections when investment tracking is active */
+.opacity-section {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.opacity-section:hover {
+  opacity: 1;
 }
 </style>

@@ -83,8 +83,8 @@ async function handleDelete(id: string) {
     <VCardTitle class="card-header pa-5" @click="toggleCardExpand">
       <div class="d-flex align-center justify-space-between w-100">
         <div class="flex-grow-1">
-          <div class="d-flex align-center text-wrap text-body-1 text-sm-h6">
-            <VIcon icon="mdi-chart-arc" class="mr-2" color="success" />
+          <div class="d-flex align-center text-wrap text-body-1 text-sm-h6 text-primary">
+            <VIcon icon="mdi-chart-arc" class="mr-2" color="primary" />
             Recent Allocations
           </div>
           <!-- Mobile: Stats below title -->

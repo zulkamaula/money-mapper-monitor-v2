@@ -138,7 +138,7 @@ async function handleDelete(pocketId: string) {
     <VCardTitle class="card-header pa-5" @click="toggleExpand">
       <div class="header-content">
         <div class="title-section">
-          <div class="d-flex align-center text-body-1 text-sm-h6">
+          <div class="d-flex align-center text-body-1 text-sm-h6 text-primary">
             <VIcon icon="mdi-wallet-outline" class="mr-2" color="primary" />
             Pockets
           </div>

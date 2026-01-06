@@ -89,7 +89,7 @@ watch(() => props.modelValue, (newVal) => {
 
         <!-- Investment Tracking Toggle -->
         <VCard variant="outlined" color="primary" class="pa-4 mb-4">
-          <div class="d-flex flex-wrap align-center justify-end justify-sm-space-between">
+          <div class="d-flex flex-column flex-sm-row align-center justify-end justify-sm-space-between">
             <div class="flex-grow-1 mr-4">
               <div class="d-flex align-center mb-1">
                 <VIcon icon="mdi-chart-line" size="20" color="success" class="mr-2" />
