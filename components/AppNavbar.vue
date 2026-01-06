@@ -40,19 +40,20 @@ async function handleLogout() {
       <VSpacer />
 
       <!-- User Menu -->
-      <VMenu v-model="userMenu" location="bottom end" offset="12">
-        <template v-slot:activator="{ props }">
-          <VBtn v-bind="props" class="user-menu-btn px-0" elevation="0" rounded="pill">
-            <VAvatar size="35" :color="userAvatar ? undefined : 'primary'" class="user-avatar">
-              <VImg v-if="userAvatar" :src="userAvatar" alt="User Avatar" cover />
-              <VIcon v-else icon="mdi-account" size="20" />
-            </VAvatar>
-            <div class="d-flex align-center ga-1 mx-2">
-              <span class="user-display-name d-none d-sm-inline">{{ userName }}</span>
-              <VIcon icon="mdi-chevron-down" size="15" class="chevron-icon" />
-            </div>
-          </VBtn>
-        </template>
+      <ClientOnly>
+        <VMenu v-model="userMenu" location="bottom end" offset="12">
+          <template v-slot:activator="{ props }">
+            <VBtn v-bind="props" class="user-menu-btn px-0" elevation="0" rounded="pill">
+              <VAvatar size="35" :color="userAvatar ? undefined : 'primary'" class="user-avatar">
+                <VImg v-if="userAvatar" :src="userAvatar" alt="User Avatar" cover />
+                <VIcon v-else icon="mdi-account" size="20" />
+              </VAvatar>
+              <div class="d-flex align-center ga-1 mx-2">
+                <span class="user-display-name d-none d-sm-inline">{{ userName }}</span>
+                <VIcon icon="mdi-chevron-down" size="15" class="chevron-icon" />
+              </div>
+            </VBtn>
+          </template>
 
         <VCard min-width="300" elevation="8" class="user-menu-card">
           <VCardText class="pa-4">
@@ -84,6 +85,7 @@ async function handleLogout() {
           </VCardText>
         </VCard>
       </VMenu>
+      </ClientOnly>
     </VContainer>
   </VAppBar>
 </template>

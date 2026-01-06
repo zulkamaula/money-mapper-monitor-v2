@@ -26,7 +26,6 @@ watch(() => selectedBook.value, async (newBook) => {
 const expandedAllocation = ref<string | null>(null)
 const copiedAmount = ref<string | null>(null)
 const isExpanded = ref(true)
-const deleting = ref<string | null>(null)
 const showAllocationDialog = ref(false)
 
 function toggleCardExpand() {
@@ -63,27 +62,19 @@ async function handleDelete(id: string) {
   const allocation = allocations.value.find(a => a.id === id)
   if (!allocation) return
 
-  const confirmed = await showConfirmDialog({
+  await showConfirmDialog({
     title: 'Delete Allocation?',
     message: `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`,
     icon: 'mdi-delete-alert',
     iconColor: 'error',
     confirmText: 'Delete',
     cancelText: 'Cancel',
-    confirmColor: 'error'
+    confirmColor: 'error',
+    onConfirm: async () => {
+      await deleteAllocation(id)
+      showSuccess('Allocation deleted successfully')
+    }
   })
-
-  if (!confirmed) return
-
-  deleting.value = id
-  try {
-    await deleteAllocation(id)
-    showSuccess('Allocation deleted successfully')
-  } catch (error) {
-    showError('Failed to delete allocation')
-  } finally {
-    deleting.value = null
-  }
 }
 </script>
 
@@ -173,8 +164,7 @@ async function handleDelete(id: string) {
                   <!-- Delete Button -->
                   <div class="d-flex justify-end mt-3 pt-2" style="border-top: 1px dashed rgba(15, 118, 110, 0.2)">
                     <VBtn color="error" variant="tonal" size="small" prepend-icon="mdi-delete" class="text-none"
-                      rounded="pill" @click.stop="handleDelete(allocation.id)"
-                      :disabled="deleting === allocation.id" :loading="deleting === allocation.id">
+                      rounded="pill" @click.stop="handleDelete(allocation.id)">
                       Delete Allocation
                     </VBtn>
                   </div>

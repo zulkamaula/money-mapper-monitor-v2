@@ -13,7 +13,6 @@ const editingBookName = ref('')
 const showCreateDialog = ref(false)
 const isInitialized = ref(false)
 const isUpdating = ref(false)
-const deleting = ref<string | null>(null)
 
 // Computed
 const hasBooks = computed(() => books.value.length > 0)
@@ -88,27 +87,19 @@ function handleSelect(book: MoneyBook) {
 async function handleDelete(book: MoneyBook, event?: Event) {
   if (event) event.stopPropagation()
   
-  const confirmed = await showDialog({
+  await showDialog({
     title: 'Delete Money Book?',
     message: `Are you sure you want to delete "${book.name}"? This will also permanently delete all pockets and allocations inside it.`,
     icon: 'mdi-delete-alert',
     iconColor: 'error',
     confirmText: 'Delete',
     cancelText: 'Cancel',
-    confirmColor: 'error'
+    confirmColor: 'error',
+    onConfirm: async () => {
+      await deleteBook(book.id)
+      showSuccess(`"${book.name}" deleted successfully`)
+    }
   })
-  
-  if (!confirmed) return
-  
-  deleting.value = book.id
-  try {
-    await deleteBook(book.id)
-    showSuccess(`"${book.name}" deleted successfully`)
-  } catch (error) {
-    showError('Failed to delete money book')
-  } finally {
-    deleting.value = null
-  }
 }
 
 // Drag and drop handlers
@@ -242,25 +233,22 @@ function onDragEnd() {
                     class="book-chip" :variant="selectedBook?.id === book.id ? 'flat' : 'outlined'">
                     <VIcon icon="mdi-drag-vertical" size="small" class="drag-handle desktop-only mr-1" />
                     {{ book.name }}
-                    <VMenu>
+                    <VMenu scroll-strategy="close">
                       <template v-slot:activator="{ props }">
                         <VBtn icon="mdi-menu-down" size="small" variant="plain" class="pa-0 h-auto w-auto ml-3" :class="[selectedBook?.id === book.id ? 'border-active' : 'border-inactive']"
                           v-bind="props" @click.stop />
                       </template>
                       <VList density="compact">
                         <VListItem @click="startEdit(book)">
-                          <template v-slot:prepend>
-                            <VIcon icon="mdi-pencil" />
-                          </template>
                           <VListItemTitle>Edit</VListItemTitle>
                         </VListItem>
-                        <VListItem @click="handleDelete(book)" :disabled="deleting === book.id">
+                        <VDivider />
+                        <VListItem @click="handleDelete(book)">
                           <template v-slot:prepend>
-                            <VProgressCircular v-if="deleting === book.id" indeterminate size="16" width="2" color="error" />
-                            <VIcon v-else icon="mdi-delete" color="error" />
+                            <VIcon icon="mdi-delete" color="error" />
                           </template>
-                          <VListItemTitle class="text-error">
-                            {{ deleting === book.id ? 'Deleting...' : 'Delete' }}
+                          <VListItemTitle class="text-error font-weight-medium">
+                            Delete
                           </VListItemTitle>
                         </VListItem>
                       </VList>

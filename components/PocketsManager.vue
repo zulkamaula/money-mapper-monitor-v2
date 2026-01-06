@@ -28,7 +28,6 @@ const editingPocketId = ref<string | null>(null)
 const pocketData = ref({ name: '', percentage: 0 })
 const isExpanded = ref(false)
 const submitting = ref(false)
-const deleting = ref<string | null>(null)
 
 const totalPercentage = computed(() => {
   return pockets.value.reduce((sum, p) => {
@@ -118,27 +117,19 @@ async function handleDelete(pocketId: string) {
   const pocket = pockets.value.find(p => p.id === pocketId)
   if (!pocket) return
 
-  const confirmed = await showConfirmDialog({
+  await showConfirmDialog({
     title: 'Delete Pocket?',
     message: `Are you sure you want to delete "${pocket.name}"?`,
     icon: 'mdi-delete-alert',
     iconColor: 'error',
     confirmText: 'Delete',
     cancelText: 'Cancel',
-    confirmColor: 'error'
+    confirmColor: 'error',
+    onConfirm: async () => {
+      await deletePocket(pocketId)
+      showSuccess(`"${pocket.name}" deleted successfully`)
+    }
   })
-
-  if (!confirmed) return
-
-  deleting.value = pocketId
-  try {
-    await deletePocket(pocketId)
-    showSuccess(`"${pocket.name}" deleted successfully`)
-  } catch (error) {
-    showError('Failed to delete pocket')
-  } finally {
-    deleting.value = null
-  }
 }
 </script>
 
@@ -216,13 +207,9 @@ async function handleDelete(pocketId: string) {
                     <VListItemTitle>Edit</VListItemTitle>
                   </VListItem>
                   <VDivider />
-                  <VListItem @click="handleDelete(pocket.id)" :disabled="deleting === pocket.id">
+                  <VListItem @click="handleDelete(pocket.id)">
                     <VListItemTitle class="text-error font-weight-bold">
-                      <span v-if="deleting === pocket.id">
-                        <VProgressCircular indeterminate size="16" width="2" class="mr-2" />
-                        Deleting...
-                      </span>
-                      <span v-else>Delete</span>
+                      Delete
                     </VListItemTitle>
                   </VListItem>
                 </VList>

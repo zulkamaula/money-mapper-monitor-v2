@@ -24,11 +24,12 @@ const { state, confirm } = useConfirmDialog()
         <!-- Actions Section -->
         <div class="d-flex flex-column-reverse flex-sm-row ga-3 px-5 px-sm-6 pb-5 pb-sm-6">
           <VBtn variant="text" color="grey-darken-1" size="large" @click="confirm(false)"
-            class="text-none flex-grow-1" rounded="lg">
+            class="text-none flex-grow-1" rounded="lg" :disabled="state.loading">
             {{ state.config.cancelText }}
           </VBtn>
           <VBtn :color="state.config.confirmColor" size="large" @click="confirm(true)"
-            class="text-none flex-grow-1" rounded="lg" elevation="0">
+            class="text-none flex-grow-1" rounded="lg" elevation="0"
+            :loading="state.loading" :disabled="state.loading">
             {{ state.config.confirmText }}
           </VBtn>
         </div>

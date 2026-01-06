@@ -6,16 +6,19 @@ export interface ConfirmDialogConfig {
   confirmText?: string
   cancelText?: string
   confirmColor?: string
+  onConfirm?: () => Promise<void>
 }
 
 interface DialogState {
   show: boolean
+  loading: boolean
   config: ConfirmDialogConfig
   resolver: ((value: boolean) => void) | null
 }
 
 const state = reactive<DialogState>({
   show: false,
+  loading: false,
   config: {
     title: '',
     message: '',
@@ -44,12 +47,43 @@ export const useConfirmDialog = () => {
     })
   }
 
-  const confirm = (result: boolean) => {
-    if (state.resolver) {
-      state.resolver(result)
+  const confirm = async (result: boolean) => {
+    if (!result) {
+      // Cancel clicked
+      if (state.resolver) {
+        state.resolver(false)
+      }
+      state.show = false
+      state.resolver = null
+      return
     }
-    state.show = false
-    state.resolver = null
+
+    // Confirm clicked - execute async callback if provided
+    if (state.config.onConfirm) {
+      state.loading = true
+      try {
+        await state.config.onConfirm()
+        if (state.resolver) {
+          state.resolver(true)
+        }
+      } catch (error) {
+        console.error('Confirm action failed:', error)
+        if (state.resolver) {
+          state.resolver(false)
+        }
+      } finally {
+        state.loading = false
+        state.show = false
+        state.resolver = null
+      }
+    } else {
+      // No async callback - just return result
+      if (state.resolver) {
+        state.resolver(true)
+      }
+      state.show = false
+      state.resolver = null
+    }
   }
 
   return {
