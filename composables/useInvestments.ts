@@ -42,19 +42,19 @@ export const useInvestments = () => {
     other: 'Lainnya'
   }
 
-  // Group holdings by asset type
+  // Group holdings by asset_type
   const holdingsByAsset = computed(() => {
     const grouped: Record<string, { name: string; holdings: Holding[] }> = {}
     
     holdings.value.forEach(holding => {
-      const key = (holding as any).asset_type
-      if (!grouped[key]) {
-        grouped[key] = {
-          name: assetTypeNames[key] || 'Unknown',
+      const assetType = (holding as any).asset_type
+      if (!grouped[assetType]) {
+        grouped[assetType] = {
+          name: assetTypeNames[assetType] || 'Unknown',
           holdings: []
         }
       }
-      grouped[key].holdings.push(holding)
+      grouped[assetType].holdings.push(holding)
     })
     
     return grouped

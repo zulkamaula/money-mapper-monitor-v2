@@ -68,7 +68,8 @@ function calculateProfit(holding: Holding) {
 
 function calculateProfitPercentage(holding: Holding) {
   if (holding.initial_investment === 0) return 0
-  return (calculateProfit(holding) / holding.initial_investment) * 100
+  const profit = calculateProfit(holding)
+  return (profit / holding.initial_investment) * 100
 }
 
 function getProfitColor(holding: Holding) {
@@ -193,8 +194,12 @@ function getProfitColor(holding: Holding) {
                             <h3 class="text-subtitle-2 font-weight-bold mb-3">
                               {{ holding.instrument_name }}
                             </h3>
-                            <VChip size="x-small" color="error" variant="flat">
-                              {{ calculateProfitPercentage(holding).toFixed(2) }}%
+                            <VChip 
+                              size="x-small" 
+                              :color="calculateProfit(holding) >= 0 ? 'success' : 'error'" 
+                              variant="flat"
+                            >
+                              {{ calculateProfit(holding) >= 0 ? '+' : '' }}{{ calculateProfitPercentage(holding) }}%
                             </VChip>
                           </div>
 

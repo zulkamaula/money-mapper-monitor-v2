@@ -118,7 +118,7 @@ function prevStep() {
 
 const canProceedStep1 = computed(() => {
   if (isEditMode.value) return true
-  return form.value.asset_type && form.value.asset_name && form.value.platform && form.value.instrument_name
+  return form.value.asset_type && form.value.platform && form.value.instrument_name
 })
 
 const canProceedStep2 = computed(() => {
@@ -145,16 +145,20 @@ async function handleSubmit() {
     return
   }
   
-  if (!form.value.asset_name || !form.value.platform || !form.value.instrument_name ||
+  if (!form.value.platform || !form.value.instrument_name ||
       form.value.initial_investment <= 0 || form.value.current_value <= 0) {
     showError('Please fill all required fields')
     return
   }
   
+  // Auto-fill asset_name from asset_type (for database, but hidden from user)
+  const assetTypeObj = assetTypes.find(at => at.value === form.value.asset_type)
+  const autoAssetName = assetTypeObj?.title || 'Unknown'
+  
   // After validation, we know these values are not null
   const submitData = {
     asset_type: form.value.asset_type as 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other',
-    asset_name: form.value.asset_name,
+    asset_name: autoAssetName, // Auto-filled from asset_type
     platform: form.value.platform as string,
     instrument_name: form.value.instrument_name as string,
     initial_investment: form.value.initial_investment,
@@ -301,19 +305,6 @@ watch(() => props.modelValue, (newVal) => {
                       </VListItem>
                     </template>
                   </VSelect>
-                </VCol>
-
-                <!-- Asset Name (required - for grouping holdings) -->
-                <VCol cols="12" md="6">
-                  <VTextField
-                    v-model="form.asset_name"
-                    label="Asset Name"
-                    placeholder="e.g., Emas Digital, Saham Bluechip, etc."
-                    variant="outlined"
-                    :disabled="isEditMode || submitting"
-                    hint="Name to group your holdings by category"
-                    persistent-hint
-                  />
                 </VCol>
 
                 <!-- Platform (disabled in edit mode) -->
