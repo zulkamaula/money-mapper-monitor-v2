@@ -45,30 +45,27 @@ function openSimulateDialog() {
 </script>
 
 <template>
-  <VCard class="summary-card bg-surface" elevation="0" variant="flat">
-    <VCardTitle class="card-header pa-5">
-      <div class="header-content">
-        <div class="title-section">
-          <div class="d-flex align-center text-body-1 text-sm-h6 text-primary">
-            <VIcon icon="mdi-chart-line" class="mr-2" color="primary" />
-            Portfolio Summary
-          </div>
-        </div>
-        <!-- Expand/Collapse button (both mobile and desktop) -->
-        <VBtn 
-          :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" 
-          size="small" 
-          variant="text"
-          @click="toggleExpand"
-        />
+  <VCard rounded="xl" elevation="0" variant="flat" border class="bg-surface">
+    <VCardTitle class="pa-4 pa-sm-5 d-flex align-center justify-space-between" style="cursor: pointer; user-select: none;">
+      <div class="d-flex align-center text-body-1 text-sm-h6 text-primary">
+        <VIcon icon="mdi-chart-line" class="mr-2" color="primary" />
+        Portfolio Summary
       </div>
+      <!-- Expand/Collapse button (mobile only) -->
+      <VBtn 
+        :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" 
+        size="small" 
+        variant="text"
+        class="d-md-none"
+        @click="toggleExpand"
+      />
     </VCardTitle>
 
     <VDivider />
 
     <!-- Shared Content: Desktop always visible, Mobile collapsible -->
     <Transition name="expand">
-      <VCardText v-show="isExpanded" class="px-6 pb-6 pt-5 summary-content">
+      <VCardText v-show="isExpanded" class="pa-4 pa-sm-6 d-md-block" style="overflow: hidden;">
         <!-- Loading State -->
         <div v-if="loading" class="py-4">
           <VSkeletonLoader type="heading" class="mb-4" />
@@ -106,10 +103,10 @@ function openSimulateDialog() {
 
           <!-- Column 2: Total Invested + Simulate Button (stacked) -->
           <VCol cols="12" md="4">
-            <div class="h-100 d-flex flex-column justify-space-between">
+            <div class="h-100 d-flex flex-column justify-space-between ga-5 ga-md-0">
               <!-- Row 1: Total Invested Card -->
               <div class="metric-card">
-                <div class="d-flex justify-space-between align-center mb-2">
+                <div class="d-flex flex-wrap justify-space-between align-center mb-2">
                   <div class="metric-label text-caption text-medium-emphasis">
                     Total Invested
                   </div>
@@ -130,9 +127,11 @@ function openSimulateDialog() {
                 color="primary"
                 variant="flat"
                 block
-                size="large"
+                :size="$vuetify.display.xs ? 'default' : 'large'"
                 prepend-icon="mdi-calculator"
                 @click="openSimulateDialog"
+                class="text-none"
+                rounded="pill"
                 >
                 Simulate Net Wealth
                 </VBtn>
@@ -153,11 +152,6 @@ function openSimulateDialog() {
 </template>
 
 <style scoped>
-.summary-card {
-  border: 1px solid rgba(15, 118, 110, 0.1);
-  border-radius: 16px;
-}
-
 .metric-card {
   padding: 12px;
   background: rgba(15, 118, 110, 0.05);
@@ -174,42 +168,6 @@ function openSimulateDialog() {
 
 .metric-value {
   line-height: 1.3;
-}
-
-.card-header {
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s ease;
-}
-
-.card-header:hover {
-  background-color: rgba(15, 118, 110, 0.02);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 12px;
-}
-
-.title-section {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Desktop: always expanded */
-@media (min-width: 960px) {
-  .summary-content {
-    display: block !important;
-  }
-  .card-header {
-    cursor: default;
-  }
-  .card-header:hover {
-    background-color: transparent;
-  }
 }
 
 /* Transition */

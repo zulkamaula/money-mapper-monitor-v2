@@ -165,18 +165,16 @@ watch(() => props.modelValue, (newVal) => {
 </script>
 
 <template>
-  <VDialog v-model="dialog" max-width="900" persistent scrollable>
+  <VDialog v-model="dialog" max-width="900" persistent scrollable fullscreen transition="dialog-bottom-transition" :class="{ 'dialog-mobile': $vuetify.display.mobile }">
     <VCard>
-      <VCardTitle class="pa-5 bg-primary">
-        <div class="d-flex align-center text-white">
-          <VIcon icon="mdi-calculator" class="mr-2" />
-          <span class="text-h6">Simulate Net Wealth</span>
-        </div>
+      <VCardTitle class="pa-4 pa-sm-5 bg-primary d-flex align-center text-white">
+        <VIcon icon="mdi-calculator" class="mr-2" />
+        <span class="text-h6">Simulate Net Wealth</span>
       </VCardTitle>
 
       <VDivider />
 
-      <VCardText class="pa-6">
+      <VCardText class="pa-4 pa-sm-6">
         <VAlert type="info" variant="tonal" border="start" class="mb-6">
           <template #text>
             <div class="text-caption">
@@ -198,20 +196,23 @@ watch(() => props.modelValue, (newVal) => {
             class="group-card mb-4"
           >
             <!-- Holding Header (Clickable) -->
-            <VCardTitle class="pa-4 cursor-pointer group-header" @click="toggleCard(data.holding.id)">
-              <div class="d-flex align-center">
-                <VIcon :icon="getAssetIcon((data.holding as any).asset_type)" size="large" color="primary" class="mr-3" />
+            <VCardTitle class="pa-3 pa-sm-4 cursor-pointer group-header" @click="toggleCard(data.holding.id)">
+              <div class="d-flex align-center flex-wrap flex-sm-nowrap ga-2">
+                <VIcon :icon="getAssetIcon((data.holding as any).asset_type)" size="large" color="primary" class="mr-2" />
                 <div class="flex-grow-1">
-                  <div class="text-subtitle-1 font-weight-semibold">{{ data.holding.instrument_name }}</div>
-                  <div class="text-caption text-medium-emphasis">
-                    {{ data.holding.platform }} • 
-                    {{ formatCurrency(data.holding.initial_investment) }}
-                    <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
-                    {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gram' : 'lot' }}
+                  <div class="text-subtitle-2 text-sm-subtitle-1 font-weight-semibold">{{ data.holding.instrument_name }}</div>
+                  <div class="text-caption text-medium-emphasis d-flex flex-wrap align-center ga-1">
+                    <span>{{ data.holding.platform }}</span>
+                    <span>•</span>
+                    <span class="d-inline-flex align-center">
+                      {{ formatCurrency(data.holding.initial_investment) }}
+                      <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
+                      {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gram' : 'lot' }}
+                    </span>
                   </div>
                   <div v-if="data.holding.purchase_date" class="text-caption text-medium-emphasis">
                     <VIcon icon="mdi-calendar" size="x-small" class="mr-1" />
-                    Purchased: {{ new Date(data.holding.purchase_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+                    {{ new Date(data.holding.purchase_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
                   </div>
                 </div>
                 <VChip 
@@ -219,7 +220,7 @@ watch(() => props.modelValue, (newVal) => {
                   :color="getProfitColor(data.profit)" 
                   size="small" 
                   variant="flat"
-                  class="mr-2"
+                  class="mr-1"
                 >
                   {{ data.profit >= 0 ? '+' : '' }}{{ data.profitPercentage.toFixed(2) }}%
                 </VChip>
@@ -229,7 +230,7 @@ watch(() => props.modelValue, (newVal) => {
 
             <!-- Expandable Content -->
             <Transition name="expand">
-              <VCardText v-show="expandedCards[data.holding.id]" class="pa-4">
+              <VCardText v-show="expandedCards[data.holding.id]" class="pa-3 pa-sm-4">
                 <!-- Current Value & Profit Display -->
               <VAlert 
                 v-if="data.purchasePrice > 0 && data.currentPrice > 0"
@@ -262,7 +263,7 @@ watch(() => props.modelValue, (newVal) => {
               </VAlert>
 
               <!-- Price Inputs -->
-              <VRow class="mt-2">
+              <VRow class="mt-2" dense>
                 <VCol cols="12" sm="6">
                   <VTextField
                     :model-value="data.purchasePriceDisplay"
@@ -328,7 +329,7 @@ watch(() => props.modelValue, (newVal) => {
         </template>
 
         <!-- Toggle Summary Button -->
-        <div v-if="holdings.length > 0 && totalCurrentValue > 0" class="mt-6 text-center">
+        <div v-if="holdings.length > 0 && totalCurrentValue > 0" class="mt-4 mt-sm-6 text-center">
           <VBtn
             :color="showSummary ? 'grey' : 'primary'"
             :variant="showSummary ? 'text' : 'flat'"
@@ -341,14 +342,14 @@ watch(() => props.modelValue, (newVal) => {
 
         <!-- Summary Section -->
         <Transition name="expand">
-        <VCard v-show="showSummary && holdings.length > 0 && totalCurrentValue > 0" elevation="4" class="mt-4 bg-primary-lighten-5">
-          <VCardTitle class="pa-4 text-primary">
+        <VCard v-show="showSummary && holdings.length > 0 && totalCurrentValue > 0" elevation="2" elevation-sm="4" rounded="lg" class="mt-3 mt-sm-4 bg-primary-lighten-5">
+          <VCardTitle class="pa-3 pa-sm-4 text-primary d-flex align-center">
             <VIcon icon="mdi-chart-box" class="mr-2" />
-            Summary
+            <span class="text-subtitle-1 text-sm-h6">Summary</span>
           </VCardTitle>
           <VDivider />
-          <VCardText class="pa-4">
-            <VRow>
+          <VCardText class="pa-3 pa-sm-4">
+            <VRow dense>
               <VCol cols="12" md="4">
                 <div class="summary-item">
                   <div class="text-caption text-medium-emphasis mb-1">Total Initial Investment</div>
@@ -389,8 +390,8 @@ watch(() => props.modelValue, (newVal) => {
             </VRow>
 
             <!-- Comparison Chart (always visible when Summary is shown) -->
-            <VCard elevation="0" class="mt-4">
-              <VCardText class="pa-4">
+            <VCard elevation="0" class="mt-3 mt-sm-4">
+              <VCardText class="pa-2 pa-sm-4">
                 <ComparisonChart
                   :initial-investment="totalInitialInvestment"
                   :current-value="totalCurrentValue"
