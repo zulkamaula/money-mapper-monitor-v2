@@ -9,7 +9,7 @@ A modern, full-stack money management application built with Nuxt 4, Vue 3, and 
 - 💼 **Pocket Management** - Allocate money to different pockets with percentage-based distribution
 - 📊 **Allocation History** - Track all your income allocations with detailed breakdowns
 - 📈 **Investment Tracking** - Track holdings across multiple platforms (gold, stocks, ETF, crypto, etc.)
-- 🔄 **Auto-Calculation** - Smart quantity and current value calculation
+- 🔄 **Auto-Calculation** - Quantity auto-calculated from investment amount and average price
 - 📱 **Responsive Design** - Optimized for mobile, tablet, and desktop
 - 🎨 **Modern UI** - Clean, fresh design with Vuetify Material Design components
 - ⚡ **Real-time Updates** - Instant UI updates with Vue 3 Composition API
@@ -226,9 +226,14 @@ NEON_DATABASE_URL
 - **Allocation-first approach**: Create investment holdings directly from budget allocations
 - Track investments across multiple platforms (Tokopedia Emas, Bibit, Stockbit, IPOT, etc.)
 - Support for various asset types: Gold, Stocks, ETF, Mutual Funds, Bonds, Crypto
+- **Smart quantity calculation**: Auto-calculates quantity from initial investment and average price
+  - Input: Initial Investment (Rp 10.000.000) + Average Price (Rp 1.000.000/gram)
+  - Output: Quantity (10 gram) - calculated and readonly
+  - Edit mode: Update investment or price, quantity recalculates automatically
 - Allocation tracking: Monitor how much budget is distributed to holdings
 - Purchase date tracking for historical analysis
 - **Simulate feature**: Calculate net wealth with current market prices (no external API)
+  - Uses stored average_price (purchase price) as baseline
   - Input current prices manually per holding
   - Real-time profit/loss calculation with percentage display
   - Comparison chart: Initial vs Current value trends
@@ -274,11 +279,25 @@ NEON_DATABASE_URL
    ```
 
 #### What This Migration Does:
-- ✅ Removes `average_price` column from `holdings` (simulate-only)
+- ✅ **ADDS** `average_price` column to `holdings` (stored, editable)
 - ✅ Removes `current_value` column from `holdings` (simulate-only)
-- ✅ **Keeps** `quantity` column (tracks what you own)
+- ✅ **Auto-calculates** `quantity` from `initial_investment / average_price`
 - ✅ Removes `has_investment_portfolio` flag from `money_books`
 - ✅ All books now support investment tracking
+
+**Migration Script:**
+```sql
+-- Add average_price column
+ALTER TABLE holdings ADD COLUMN average_price NUMERIC(20, 2);
+
+-- Backfill average_price from existing data
+UPDATE holdings 
+SET average_price = CASE 
+  WHEN quantity > 0 THEN initial_investment / quantity
+  ELSE NULL
+END
+WHERE average_price IS NULL;
+```
 
 #### After Migration:
 - Frontend code is already updated and ready

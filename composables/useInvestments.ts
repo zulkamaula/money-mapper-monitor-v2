@@ -126,7 +126,7 @@ export const useInvestments = () => {
     platform: string
     instrument_name: string
     initial_investment: number
-    quantity: number
+    average_price: number
     purchase_date?: string
     notes?: string
     linked_allocation_id?: string
@@ -159,7 +159,7 @@ export const useInvestments = () => {
   // Update holding - update all mutable financial fields
   async function updateHolding(holdingId: string, data: {
     initial_investment?: number
-    quantity: number
+    average_price?: number
     purchase_date?: string
     notes?: string
   }) {

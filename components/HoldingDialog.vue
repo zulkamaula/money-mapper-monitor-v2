@@ -90,8 +90,7 @@ watch(() => form.value.instrument_name, (newInstrument) => {
   }
 })
 
-// Note: Quantity is manual input from user, not auto-calculated
-
+// Quantity is auto-calculated from initial_investment / average_price
 const initialDisplay = ref('')
 const averagePriceDisplay = ref('')
 const submitting = ref(false)
@@ -113,11 +112,11 @@ function handleInitialInput(event: Event) {
 }
 
 
-function handleQuantityInput(event: Event) {
+function handleAveragePriceInput(event: Event) {
   const input = event.target as HTMLInputElement
   const parsed = parseNumberInput(input.value)
-  form.value.quantity = parsed > 0 ? parsed : undefined
-  quantityDisplay.value = parsed > 0 ? formatQuantity(parsed) : ''
+  form.value.average_price = parsed > 0 ? parsed : undefined
+  averagePriceDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
 }
 
 const allocationItems = computed(() => [
@@ -135,13 +134,14 @@ function resetForm() {
     platform: null,
     instrument_name: null,
     initial_investment: 0,
-    quantity: undefined,
+    average_price: undefined,
+    quantity: 0,
     purchase_date: formatDateInput(null),
     notes: '',
     linked_allocation_id: undefined
   }
   initialDisplay.value = ''
-  quantityDisplay.value = ''
+  averagePriceDisplay.value = ''
   submitting.value = false
   currentStep.value = 1
 }
@@ -167,7 +167,7 @@ const canProceedStep1 = computed(() => {
 const isFromAllocation = computed(() => !!props.allocationContext)
 
 const canProceedStep2 = computed(() => {
-  return form.value.initial_investment > 0 && form.value.quantity && form.value.quantity > 0
+  return form.value.initial_investment > 0 && form.value.average_price && form.value.average_price > 0
 })
 
 // Auto-scroll stepper header on mobile
@@ -191,7 +191,7 @@ async function handleSubmit() {
   }
   
   if (!form.value.platform || !form.value.instrument_name ||
-      form.value.initial_investment <= 0 || !form.value.quantity || form.value.quantity <= 0) {
+      form.value.initial_investment <= 0 || !form.value.average_price || form.value.average_price <= 0) {
     showError('Please fill all required fields')
     return
   }
@@ -207,7 +207,7 @@ async function handleSubmit() {
     platform: form.value.platform as string,
     instrument_name: form.value.instrument_name as string,
     initial_investment: form.value.initial_investment,
-    quantity: form.value.quantity!, // Required
+    average_price: form.value.average_price!, // Required - quantity will be auto-calculated
     purchase_date: form.value.purchase_date,
     notes: form.value.notes,
     linked_allocation_id: form.value.linked_allocation_id
@@ -219,7 +219,7 @@ async function handleSubmit() {
       // Update mode - update all mutable financial fields
       await updateHolding(props.holding.id, {
         initial_investment: form.value.initial_investment,
-        quantity: form.value.quantity!,
+        average_price: form.value.average_price!,
         purchase_date: form.value.purchase_date,
         notes: form.value.notes
       })
@@ -251,6 +251,7 @@ watch(() => props.modelValue, (newVal) => {
     } else if (props.holding) {
       // Edit mode - populate form with holding data
       const initialInvestment = Number(props.holding.initial_investment) || 0
+      const averagePrice = Number(props.holding.average_price) || 0
       const quantityNum = Number(props.holding.quantity) || 0
       
       form.value = {
@@ -259,13 +260,14 @@ watch(() => props.modelValue, (newVal) => {
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
         initial_investment: initialInvestment,
+        average_price: averagePrice > 0 ? averagePrice : undefined,
         quantity: quantityNum,
         purchase_date: formatDateInput(props.holding.purchase_date),
         notes: props.holding.notes || '',
         linked_allocation_id: props.holding.linked_allocation_id || undefined
       }
       initialDisplay.value = formatNumberInput(initialInvestment)
-      quantityDisplay.value = quantityNum > 0 ? formatQuantity(quantityNum) : ''
+      averagePriceDisplay.value = averagePrice > 0 ? formatNumberInput(averagePrice) : ''
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -439,16 +441,17 @@ watch(() => props.modelValue, (newVal) => {
                   />
                 </VCol>
 
-                <!-- Row 2: Quantity (manual input) -->
+                <!-- Row 2: Average Price (per unit) -->
                 <VCol cols="12" md="6">
                   <VTextField
-                    v-model="quantityDisplay"
-                    label="Quantity"
+                    v-model="averagePriceDisplay"
+                    label="Average Price (per unit)"
                     placeholder="0"
                     variant="outlined"
-                    inputmode="decimal"
-                    :disabled="isEditMode ? false : submitting"
-                    @input="handleQuantityInput"
+                    prefix="Rp"
+                    inputmode="numeric"
+                    :disabled="submitting"
+                    @input="handleAveragePriceInput"
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
@@ -456,17 +459,28 @@ watch(() => props.modelValue, (newVal) => {
                           <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
                         <VCard class="pa-3" style="max-width: 300px;">
-                          <div class="text-caption font-weight-bold mb-1">Amount you own</div>
+                          <div class="text-caption font-weight-bold mb-1">Price per unit when purchased</div>
                           <div class="text-caption">
-                            <strong>Examples:</strong><br>
-                            • Gold: 10 (gram)<br>
-                            • Stock: 100 (shares)<br>
-                            • ETF: 5 (units)<br>
-                            • Mutual Fund: 1000 (units)<br><br>
-                            <strong>Note:</strong> Use Simulate dialog to input prices and calculate profit/loss
+                            For gold: price per gram. For stocks: price per share. Quantity will be auto-calculated.
                           </div>
                         </VCard>
                       </VMenu>
+                    </template>
+                  </VTextField>
+                </VCol>
+
+                <!-- Row 3: Quantity (auto-calculated, readonly) -->
+                <VCol cols="12" md="6">
+                  <VTextField
+                    :model-value="formatQuantity(calculatedQuantity)"
+                    label="Quantity (auto-calculated)"
+                    variant="outlined"
+                    readonly
+                    bg-color="grey-lighten-4"
+                    :suffix="form.asset_type === 'gold' ? 'gram' : 'units'"
+                  >
+                    <template v-slot:append-inner>
+                      <VIcon icon="mdi-calculator" size="small" class="text-medium-emphasis" />
                     </template>
                   </VTextField>
                 </VCol>
