@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput, formatCurrency } from '~/utils/format'
+import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity } from '~/utils/format'
 import type { Holding } from '~/types/models'
 import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/constants/investmentOptions'
 
@@ -16,7 +16,6 @@ const emit = defineEmits<{
 const { createHolding, updateHolding } = useInvestments()
 const { allocations } = useAllocations()
 const { success: showSuccess, error: showError } = useNotification()
-const { fetchGoldPrice, loading: priceLoading } = usePriceData()
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -100,17 +99,10 @@ watch([() => form.value.initial_investment, () => form.value.average_price], ([i
   }
 })
 
-// Auto-calculate Current Value when Quantity or Average Price changes
-watch([() => form.value.quantity, () => form.value.average_price], ([qty, avgPrice]) => {
-  if (qty && qty > 0 && avgPrice && avgPrice > 0) {
-    const calculatedValue = qty * avgPrice
-    form.value.current_value = calculatedValue
-    currentDisplay.value = formatNumberInput(calculatedValue)
-  }
-})
+// Note: Current Value removed from form - it's same as Initial Investment at purchase time
+// Current Value should be updated later when viewing holdings, not at creation
 
 const initialDisplay = ref('')
-const currentDisplay = ref('')
 const averagePriceDisplay = ref('')
 const submitting = ref(false)
 const currentStep = ref(1)
@@ -122,12 +114,6 @@ function handleInitialInput(event: Event) {
   initialDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
 }
 
-function handleCurrentInput(event: Event) {
-  const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
-  form.value.current_value = parsed
-  currentDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
-}
 
 function handleAveragePriceInput(event: Event) {
   const input = event.target as HTMLInputElement
@@ -159,7 +145,6 @@ function resetForm() {
     linked_allocation_id: undefined
   }
   initialDisplay.value = ''
-  currentDisplay.value = ''
   averagePriceDisplay.value = ''
   submitting.value = false
   currentStep.value = 1
@@ -177,24 +162,6 @@ function prevStep() {
   }
 }
 
-async function handleFetchPrice() {
-  if (!form.value.asset_type) {
-    showError('Please select an instrument first')
-    return
-  }
-
-  // Currently only gold is supported via Yahoo Finance
-  if (form.value.asset_type === 'gold') {
-    const price = await fetchGoldPrice()
-    if (price) {
-      form.value.average_price = price
-      averagePriceDisplay.value = formatNumberInput(price)
-      showSuccess(`Gold price fetched: ${formatCurrency(price)}/gram`)
-    }
-  } else {
-    showError('Price fetching is currently only available for gold. Please enter price manually.')
-  }
-}
 
 const canProceedStep1 = computed(() => {
   if (isEditMode.value) return true
@@ -202,7 +169,7 @@ const canProceedStep1 = computed(() => {
 })
 
 const canProceedStep2 = computed(() => {
-  return form.value.initial_investment > 0 && form.value.current_value > 0
+  return form.value.initial_investment > 0 && form.value.average_price && form.value.average_price > 0
 })
 
 // Auto-scroll stepper header on mobile
@@ -282,7 +249,6 @@ watch(() => props.modelValue, (newVal) => {
       // Edit mode - populate form with holding data
       // Parse all number values explicitly to prevent string concatenation
       const initialInvestment = Number(props.holding.initial_investment) || 0
-      const currentValueNum = Number(props.holding.current_value) || 0
       const quantityNum = props.holding.quantity ? Number(props.holding.quantity) : undefined
       const avgPrice = props.holding.average_price ? Number(props.holding.average_price) : undefined
       
@@ -292,7 +258,7 @@ watch(() => props.modelValue, (newVal) => {
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
         initial_investment: initialInvestment,
-        current_value: currentValueNum,
+        current_value: initialInvestment, // Same as initial at purchase time
         quantity: quantityNum,
         average_price: avgPrice,
         purchase_date: props.holding.purchase_date || new Date().toISOString().split('T')[0],
@@ -300,7 +266,6 @@ watch(() => props.modelValue, (newVal) => {
         linked_allocation_id: props.holding.linked_allocation_id || undefined
       }
       initialDisplay.value = formatNumberInput(initialInvestment)
-      currentDisplay.value = formatNumberInput(currentValueNum)
       averagePriceDisplay.value = avgPrice ? formatNumberInput(avgPrice) : ''
     } else {
       // Create mode - reset form to defaults
@@ -459,8 +424,8 @@ watch(() => props.modelValue, (newVal) => {
                   />
                 </VCol>
 
-                <!-- Row 2: Average Price | Sync Button -->
-                <VCol cols="12" md="6" class="mb-5">
+                <!-- Row 2: Average Price with inline sync button -->
+                <VCol cols="12" md="6">
                   <VTextField
                     v-model="averagePriceDisplay"
                     label="Average Price"
@@ -470,101 +435,64 @@ watch(() => props.modelValue, (newVal) => {
                     inputmode="numeric"
                     :disabled="submitting"
                     @input="handleAveragePriceInput"
-                    hide-details
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
                           <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <VCard class="pa-3" style="max-width: 280px;">
-                          <div class="text-caption font-weight-bold mb-1">Price per unit at time of purchase</div>
+                        <VCard class="pa-3" style="max-width: 340px;">
+                          <div class="text-caption font-weight-bold mb-1">Price per unit at purchase</div>
                           <div class="text-caption">
-                            <strong>Manual or Fetch:</strong><br>
-                            Click sync button to fetch latest price from API<br>
-                            Or enter manually<br><br>
+                            <strong>Input Format (IDR):</strong><br>
+                            • Use dots for thousands: 2.400.000 = 2.4M<br>
+                            • No comma for decimals in input<br><br>
+                            <strong>For Non-IDR Currency (USD, etc):</strong><br>
+                            Convert to IDR first using current exchange rate<br>
+                            Example: US Stock $50/share × 15.800 = Rp 790.000<br><br>
+                            <strong>Current Market Reference (Jan 2026):</strong><br>
+                            • Gold: ~Rp 2.516.000/gram<br>
+                            • Stock IDX (BBCA): ~Rp 10.000/share<br>
+                            • Stock US (AAPL): ~$200 = Rp 3.160.000/share
+                          </div>
+                        </VCard>
+                      </VMenu>
+                    </template>
+                  </VTextField>
+                </VCol>
+
+                <!-- Row 3: Quantity (auto-calculated) -->
+                <VCol cols="12" md="6">
+                  <VTextField
+                    :model-value="formatQuantity(form.quantity)"
+                    :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity (lot)'"
+                    placeholder="Auto-calculated from Initial ÷ Average Price"
+                    variant="outlined"
+                    inputmode="numeric"
+                    :suffix="form.asset_type === 'gold' ? 'gram' : 'lot'"
+                    readonly
+                    :disabled="submitting"
+                  >
+                    <template v-slot:append-inner>
+                      <VMenu location="top" :close-on-content-click="false">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
+                        </template>
+                        <VCard class="pa-3" style="max-width: 360px;">
+                          <div class="text-caption font-weight-bold mb-1">Auto-calculated quantity</div>
+                          <div class="text-caption">
+                            <strong>Formula:</strong> Initial Investment ÷ Average Price<br><br>
+                            <strong>Note on Format:</strong><br>
+                            • Comma (,) = decimal separator<br>
+                            • Dot (.) = thousand separator<br>
+                            • No trailing zeros shown<br><br>
+                            <strong>Stock/ETF Lot Info:</strong><br>
+                            1 lot typically = 100 shares (IDX)<br>
+                            US stocks usually fractional shares allowed<br><br>
                             <strong>Examples:</strong><br>
-                            • Emas: Rp 1.000.000/gram<br>
-                            • Saham: Rp 10.000/share
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-
-                <VCol cols="12" md="6" class="d-flex align-center mb-5">
-                  <VBtn
-                    size="large"
-                    variant="tonal"
-                    color="primary"
-                    :disabled="submitting || !form.asset_type || priceLoading"
-                    :loading="priceLoading"
-                    prepend-icon="mdi-sync-circle"
-                    class="mt-0 text-none h-100"
-                    block
-                    @click="handleFetchPrice"
-                  >
-                    Get Sync Price
-                  </VBtn>
-                </VCol>
-
-                <!-- Row 3: Quantity | Current Value -->
-                <VCol cols="12" md="6">
-                  <VTextField
-                    :model-value="form.quantity || 0"
-                    :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity'"
-                    placeholder="Auto-calculated"
-                    variant="outlined"
-                    inputmode="numeric"
-                    :suffix="form.asset_type === 'gold' ? 'gram' : ''"
-                    readonly
-                    bg-color="grey-lighten-4"
-                  >
-                    <template v-slot:append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
-                        </template>
-                        <VCard class="pa-3" style="max-width: 280px;">
-                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
-                          <div class="text-caption">
-                            <strong>Formula:</strong><br>
-                            Quantity = Initial Investment ÷ Average Price<br><br>
-                            <strong>Example:</strong><br>
-                            • Rp 500.000 ÷ Rp 1.000.000 = 0.5 gram<br>
-                            • Rp 1.000.000 ÷ Rp 10.000 = 100 shares
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-
-                <VCol cols="12" md="6">
-                  <VTextField
-                    v-model="currentDisplay"
-                    label="Current Value"
-                    placeholder="Auto-calculated"
-                    variant="outlined"
-                    prefix="Rp"
-                    inputmode="numeric"
-                    readonly
-                    bg-color="grey-lighten-4"
-                  >
-                    <template v-slot:append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
-                        </template>
-                        <VCard class="pa-3" style="max-width: 300px;">
-                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
-                          <div class="text-caption">
-                            <strong>Formula:</strong><br>
-                            Current Value = Quantity × Average Price<br><br>
-                            <strong>Example:</strong><br>
-                            • 0.5 gram × Rp 1.200.000 = Rp 600.000<br>
-                            • 100 shares × Rp 10.500 = Rp 1.050.000
+                            • Gold: Rp 1.258.000 ÷ Rp 2.516.000/g = <strong>0,5 gram</strong><br>
+                            • Stock: Rp 1.000.000 ÷ Rp 10.000/share = <strong>100 lot</strong><br>
+                            • Partial: Rp 500.000 ÷ Rp 10.000/share = <strong>50 lot</strong>
                           </div>
                         </VCard>
                       </VMenu>

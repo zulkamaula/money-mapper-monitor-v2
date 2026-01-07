@@ -83,3 +83,37 @@ export function parseNumberInput(value: string): number {
 
   return parseInt(cleaned) || 0
 }
+
+/**
+ * Format quantity with Indonesian decimal format
+ * Uses comma for decimal separator, removes trailing zeros
+ * Examples:
+ * - 1.0000 → "1"
+ * - 0.0500 → "0,05"
+ * - 1.2500 → "1,25"
+ * - 5000 → "5.000" (thousands use dots)
+ */
+export function formatQuantity(value: number | undefined): string {
+  if (value === undefined || value === null || isNaN(value)) return '0'
+  
+  // If it's a whole number, use thousand separator format
+  if (Number.isInteger(value)) {
+    return new Intl.NumberFormat('id-ID').format(value)
+  }
+  
+  // For decimals, use Indonesian format with comma
+  // Remove trailing zeros but keep significant decimals
+  const str = value.toFixed(4) // Max 4 decimals for precision
+  const parts = str.split('.')
+  const whole = parts[0] || '0'
+  const decimal = parts[1] || ''
+  
+  // Remove trailing zeros from decimal part
+  const trimmedDecimal = decimal.replace(/0+$/, '')
+  
+  // Format whole number part with thousand separators
+  const formattedWhole = new Intl.NumberFormat('id-ID').format(parseInt(whole))
+  
+  // Return with comma as decimal separator (Indonesian format)
+  return trimmedDecimal ? `${formattedWhole},${trimmedDecimal}` : formattedWhole
+}
