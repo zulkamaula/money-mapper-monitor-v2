@@ -2,7 +2,6 @@ export interface MoneyBook {
   id: string
   user_id: string
   name: string
-  has_investment_portfolio: boolean
   order_index: number
   created_at: string
   updated_at?: string
@@ -62,9 +61,7 @@ export interface Holding {
   platform: string
   instrument_name: string
   initial_investment: number
-  current_value: number
-  quantity?: number
-  average_price?: number
+  quantity: number
   purchase_date?: string
   notes?: string
   linked_allocation_id?: string

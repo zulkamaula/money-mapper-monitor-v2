@@ -31,11 +31,10 @@ watch(() => books.value, (newBooks) => {
   localBooks.value = [...newBooks]
 }, { immediate: true, deep: true })
 
-async function handleCreateConfirm(data: { name: string, hasInvestmentPortfolio: boolean }) {
+async function handleCreateConfirm(data: { name: string }) {
   try {
-    await createBook(data.name, data.hasInvestmentPortfolio)
-    const investmentMsg = data.hasInvestmentPortfolio ? ' with Investment Tracking' : ''
-    showSuccess(`"${data.name}"${investmentMsg} created successfully`)
+    await createBook(data.name)
+    showSuccess(`"${data.name}" created successfully`)
     showCreateDialog.value = false
   } catch (error) {
     showError('Failed to create money book')
@@ -53,7 +52,7 @@ function startEdit(book: MoneyBook, event?: Event) {
   showEditDialog.value = true
 }
 
-async function handleEditConfirm(data: { name: string, hasInvestmentPortfolio: boolean }) {
+async function handleEditConfirm(data: { name: string }) {
   if (!editingBook.value) return
   
   try {

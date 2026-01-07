@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/format'
 
-const { totalInvested, currentValue, totalProfit, profitPercentage, loading, assetAllocationData } = useInvestments()
+const { totalInvested, loading, assetAllocationData, holdings } = useInvestments()
 
 const isExpanded = ref(false)
+const showSimulateDialog = ref(false)
 
-const profitColor = computed(() => {
-  return totalProfit.value >= 0 ? 'success' : 'error'
-})
-
-const profitIcon = computed(() => {
-  return totalProfit.value >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'
-})
+// Note: Profit calculations will be added in Phase 3 (Simulate Dialog)
+// const profitColor = computed(() => {
+//   return totalProfit.value >= 0 ? 'success' : 'error'
+// })
+//
+// const profitIcon = computed(() => {
+//   return totalProfit.value >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'
+// })
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
+}
+
+function openSimulateDialog() {
+  showSimulateDialog.value = true
 }
 </script>
 
@@ -29,17 +35,15 @@ function toggleExpand() {
           </div>
           <!-- Mobile: Stats below title -->
           <div class="subtitle-stats d-md-none mt-1">
-            <VChip v-if="!loading" :color="profitColor" variant="flat" size="x-small">
-              <VIcon :icon="profitIcon" start size="14" />
-              {{ profitPercentage.toFixed(2) }}%
+            <VChip v-if="!loading" color="primary" variant="tonal" size="x-small">
+              {{ formatCurrency(totalInvested) }}
             </VChip>
           </div>
         </div>
         <!-- Desktop: Stats on right -->
         <div class="subtitle-stats-desktop d-none d-md-flex">
-          <VChip v-if="!loading" :color="profitColor" variant="flat" size="small">
-            <VIcon :icon="profitIcon" start size="16" />
-            {{ profitPercentage.toFixed(2) }}%
+          <VChip v-if="!loading" color="primary" variant="tonal" size="small">
+            {{ formatCurrency(totalInvested) }}
           </VChip>
         </div>
         <!-- Mobile: Toggle button -->
@@ -71,7 +75,7 @@ function toggleExpand() {
 
         <VRow v-else>
         <!-- Total Invested -->
-        <VCol cols="12" md="4">
+        <VCol cols="12">
           <div class="metric-card">
             <div class="metric-label text-caption text-medium-emphasis mb-1">
               Total Invested
@@ -82,8 +86,8 @@ function toggleExpand() {
           </div>
         </VCol>
 
-        <!-- Current Value -->
-        <VCol cols="12" md="4">
+        <!-- Note: Current Value and Profit/Loss will be added in Phase 3 (Simulate Dialog) -->
+        <!-- <VCol cols="12" md="4">
           <div class="metric-card">
             <div class="metric-label text-caption text-medium-emphasis mb-1">
               Current Value
@@ -94,7 +98,6 @@ function toggleExpand() {
           </div>
         </VCol>
 
-        <!-- Profit/Loss -->
         <VCol cols="12" md="4">
           <div class="metric-card">
             <div class="metric-label text-caption text-medium-emphasis mb-1">
@@ -104,8 +107,22 @@ function toggleExpand() {
               {{ loading ? '...' : formatCurrency(totalProfit) }}
             </div>
           </div>
-        </VCol>
+        </VCol> -->
         </VRow>
+
+        <!-- Simulate Button -->
+        <div v-if="holdings.length > 0" class="mt-4">
+          <VBtn
+            color="primary"
+            variant="flat"
+            block
+            rounded="pill"
+            prepend-icon="mdi-calculator"
+            @click="openSimulateDialog"
+          >
+            Simulate Net Wealth
+          </VBtn>
+        </div>
 
         <!-- Asset Allocation Chart -->
         <VDivider v-if="Object.keys(assetAllocationData).length > 0" class="my-4" />
@@ -119,6 +136,9 @@ function toggleExpand() {
         </div>
       </VCardText>
     </Transition>
+
+    <!-- Simulate Dialog -->
+    <SimulateDialog v-model="showSimulateDialog" />
   </VCard>
 </template>
 

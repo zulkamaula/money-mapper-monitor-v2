@@ -22,22 +22,8 @@ export const useInvestments = () => {
     }, 0)
   })
 
-  const currentValue = computed(() => {
-    if (!holdings.value || holdings.value.length === 0) return 0
-    return holdings.value.reduce((sum, h) => {
-      const value = h.current_value
-      return sum + (isNaN(value) || value == null ? 0 : value)
-    }, 0)
-  })
-
-  const totalProfit = computed(() => {
-    return currentValue.value - totalInvested.value
-  })
-
-  const profitPercentage = computed(() => {
-    if (totalInvested.value === 0) return 0
-    return (totalProfit.value / totalInvested.value) * 100
-  })
+  // Note: current_value, totalProfit, profitPercentage are now calculated in Simulate dialog
+  // Holdings only track initial_investment and quantity
 
   // Map asset types to display names
   const assetTypeNames: Record<string, string> = {
@@ -68,7 +54,7 @@ export const useInvestments = () => {
     return grouped
   })
 
-  // Asset allocation data for chart
+  // Asset allocation data for chart (based on initial_investment)
   const assetAllocationData = computed(() => {
     const allocation: Record<string, { name: string; value: number }> = {}
     
@@ -81,7 +67,7 @@ export const useInvestments = () => {
           value: 0 
         }
       }
-      allocation[type].value += holding.current_value
+      allocation[type].value += holding.initial_investment
     })
     
     return allocation
@@ -131,9 +117,8 @@ export const useInvestments = () => {
     platform: string
     instrument_name: string
     initial_investment: number
-    current_value: number
-    quantity?: number
-    average_price?: number
+    quantity: number
+    purchase_date?: string
     notes?: string
     linked_allocation_id?: string
   }) {
@@ -162,16 +147,12 @@ export const useInvestments = () => {
     }
   }
 
-  // Update holding
-  async function updateHolding(
-    holdingId: string, 
-    data: {
-      current_value: number
-      quantity?: number
-      average_price?: number
-      notes?: string
-    }
-  ) {
+  // Update holding - only update mutable fields
+  async function updateHolding(holdingId: string, data: {
+    quantity: number
+    purchase_date?: string
+    notes?: string
+  }) {
     try {
       const updated = await $fetch<Holding>(`/api/holdings/${holdingId}`, {
         method: 'PATCH',
@@ -225,9 +206,9 @@ export const useInvestments = () => {
     })
   }
 
-  // Watch for selected book changes
+  // Watch for selected book changes - all books now support investment tracking
   watch(() => selectedBook.value?.id, (newBookId) => {
-    if (newBookId && selectedBook.value?.has_investment_portfolio) {
+    if (newBookId) {
       loadInvestments(newBookId)
     } else {
       portfolio.value = null
@@ -243,9 +224,6 @@ export const useInvestments = () => {
     
     // Computed
     totalInvested,
-    currentValue,
-    totalProfit,
-    profitPercentage,
     holdingsByAsset,
     assetAllocationData,
     

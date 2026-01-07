@@ -2,7 +2,7 @@
 import { formatCurrency } from '~/utils/format'
 import type { Holding } from '~/types/models'
 
-const { holdings, loading, holdingsByAsset, handleDeleteHolding, currentValue } = useInvestments()
+const { holdings, loading, holdingsByAsset, handleDeleteHolding } = useInvestments()
 
 const showHoldingDialog = ref(false)
 const editingHolding = ref<Holding | undefined>(undefined)
@@ -58,19 +58,8 @@ function toggleGroup(assetType: string) {
   expandedGroups.value[assetType] = !expandedGroups.value[assetType]
 }
 
-function calculateProfit(holding: Holding) {
-  return holding.current_value - holding.initial_investment
-}
-
-function calculateProfitPercentage(holding: Holding) {
-  if (holding.initial_investment === 0) return 0
-  const profit = calculateProfit(holding)
-  return (profit / holding.initial_investment) * 100
-}
-
-function getProfitColor(holding: Holding) {
-  return calculateProfit(holding) >= 0 ? 'success' : 'error'
-}
+// Note: Profit calculations moved to Simulate dialog (Phase 3)
+// Holdings only show initial_investment for now
 </script>
 
 <template>
@@ -84,20 +73,14 @@ function getProfitColor(holding: Holding) {
               <VIcon icon="mdi-briefcase" class="mr-2" color="primary" />
               Investment Holdings
             </div>
-            <!-- Mobile: Stats below title -->
-            <div class="d-md-none mt-1 d-flex align-center ga-2">
-              <VChip size="small" color="primary" variant="tonal">
-                {{ holdings.length }}
-              </VChip>
-              <span class="text-caption">{{ formatCurrency(currentValue) }}</span>
+            <!-- Mobile: Holdings count -->
+            <div class="subtitle-stats d-md-none mt-1">
+              {{ holdings.length }} holdings
             </div>
           </div>
-          <!-- Desktop: Stats on right -->
-          <div class="d-none d-md-flex align-center ga-2">
-            <VChip size="small" color="primary" variant="tonal">
-              {{ holdings.length }}
-            </VChip>
-            <span class="text-body-2">{{ formatCurrency(currentValue) }}</span>
+          <!-- Desktop: Holdings count -->
+          <div class="subtitle-stats-desktop d-none d-md-block">
+            {{ holdings.length }} holdings
           </div>
           <!-- Mobile: Toggle button -->
           <VBtn class="d-md-none" :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="small"
@@ -183,31 +166,26 @@ function getProfitColor(holding: Holding) {
                           </div>
 
                           <!-- Instrument Name -->
-                          <div class="d-flex justify-space-between">
-                            <h3 class="text-subtitle-2 font-weight-bold mb-3">
-                              {{ holding.instrument_name }}
-                            </h3>
-                            <VChip 
-                              size="x-small" 
-                              :color="calculateProfit(holding) >= 0 ? 'success' : 'error'" 
-                              variant="flat"
-                            >
-                              {{ calculateProfit(holding) >= 0 ? '+' : '' }}{{ calculateProfitPercentage(holding).toFixed(2) }}%
+                          <div class="d-flex justify-space-between align-center mb-2">
+                            <div class="text-body-2 font-weight-semibold text-primary">{{ holding.instrument_name }}</div>
+                            <VChip size="x-small" color="primary" variant="tonal">
+                              {{ holding.asset_type === 'gold' ? '🪙' : '📈' }}
                             </VChip>
                           </div>
 
                           <!-- Values -->
+                          <!-- Investment Info -->
                           <div class="d-flex flex-wrap ga-3 mb-3">
                             <div class="flex-grow-1">
-                              <div class="text-caption text-medium-emphasis mb-1">Initial</div>
+                              <div class="text-caption text-medium-emphasis mb-1">Invested</div>
                               <div class="text-body-2 font-weight-medium">
                                 {{ formatCurrency(holding.initial_investment) }}
                               </div>
                             </div>
-                            <div class="flex-grow-1">
-                              <div class="text-caption text-medium-emphasis mb-1">Current</div>
-                              <div class="text-body-2 font-weight-bold">
-                                {{ formatCurrency(holding.current_value) }}
+                            <div v-if="holding.quantity" class="flex-grow-1">
+                              <div class="text-caption text-medium-emphasis mb-1">Quantity</div>
+                              <div class="text-body-2 font-weight-medium">
+                                {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'lot' }}
                               </div>
                             </div>
                           </div>
@@ -218,14 +196,11 @@ function getProfitColor(holding: Holding) {
                             Linked to Budget
                           </div>
 
-                          <!-- Profit/Loss -->
-                          <VAlert :color="getProfitColor(holding)" size="small" variant="tonal">
-                            <div class="d-flex justify-space-between flex-wrap align-center">
-                              <VIcon :icon="calculateProfit(holding) >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'"
-                                size="small" />
-                              <span class="d-inline-block mx-1">
-                                {{ formatCurrency(calculateProfit(holding)) }}
-                              </span>
+                          <!-- Note: Profit/Loss will be shown in Simulate dialog (Phase 3) -->
+                          <VAlert color="info" size="small" variant="tonal">
+                            <div class="text-caption">
+                              <VIcon icon="mdi-calculator" size="small" class="mr-1" />
+                              Use Simulate to calculate profit/loss
                             </div>
                           </VAlert>
 

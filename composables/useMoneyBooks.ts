@@ -32,14 +32,13 @@ export const useMoneyBooks = () => {
   }
 
   // Create book
-  async function createBook(name: string, hasInvestmentPortfolio: boolean = false) {
+  async function createBook(name: string) {
     creating.value = true
     try {
       const newBook = await $fetch<MoneyBook>('/api/money-books', {
         method: 'POST',
         body: { 
-          name,
-          has_investment_portfolio: hasInvestmentPortfolio
+          name
         }
       })
 

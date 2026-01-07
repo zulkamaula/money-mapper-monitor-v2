@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity } from '~/utils/format'
-import type { Holding } from '~/types/models'
+import type { Holding, Allocation } from '~/types/models'
 import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/constants/investmentOptions'
 
 const props = defineProps<{
   modelValue: boolean
   holding?: Holding
+  allocationContext?: Allocation | null
 }>()
 
 const emit = defineEmits<{
@@ -167,8 +168,10 @@ function prevStep() {
 
 const canProceedStep1 = computed(() => {
   if (isEditMode.value) return true
-  return form.value.asset_type && form.value.platform && form.value.instrument_name
+  return form.value.platform && form.value.instrument_name
 })
+
+const isFromAllocation = computed(() => !!props.allocationContext)
 
 const canProceedStep2 = computed(() => {
   return form.value.initial_investment > 0 && form.value.average_price && form.value.average_price > 0
@@ -195,7 +198,7 @@ async function handleSubmit() {
   }
   
   if (!form.value.platform || !form.value.instrument_name ||
-      form.value.initial_investment <= 0 || form.value.current_value <= 0) {
+      form.value.initial_investment <= 0 || !form.value.quantity || form.value.quantity <= 0) {
     showError('Please fill all required fields')
     return
   }
@@ -211,9 +214,8 @@ async function handleSubmit() {
     platform: form.value.platform as string,
     instrument_name: form.value.instrument_name as string,
     initial_investment: form.value.initial_investment,
-    current_value: form.value.current_value,
-    quantity: form.value.quantity,
-    average_price: form.value.average_price,
+    quantity: form.value.quantity!, // Required
+    purchase_date: form.value.purchase_date,
     notes: form.value.notes,
     linked_allocation_id: form.value.linked_allocation_id
   }
@@ -223,9 +225,8 @@ async function handleSubmit() {
     if (isEditMode.value && props.holding) {
       // Update mode - only update mutable fields
       await updateHolding(props.holding.id, {
-        current_value: form.value.current_value,
-        quantity: form.value.quantity,
-        average_price: form.value.average_price,
+        quantity: form.value.quantity!,
+        purchase_date: form.value.purchase_date,
         notes: form.value.notes
       })
       showSuccess('Holding updated successfully')
@@ -247,12 +248,17 @@ async function handleSubmit() {
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
     // Dialog is opening
-    if (props.holding) {
+    if (props.allocationContext) {
+      // Creating from allocation - pre-fill allocation data
+      form.value.linked_allocation_id = props.allocationContext.id
+      form.value.initial_investment = props.allocationContext.source_amount
+      initialDisplay.value = formatNumberInput(props.allocationContext.source_amount)
+      currentStep.value = 1
+    } else if (props.holding) {
       // Edit mode - populate form with holding data
       // Parse all number values explicitly to prevent string concatenation
       const initialInvestment = Number(props.holding.initial_investment) || 0
-      const quantityNum = props.holding.quantity ? Number(props.holding.quantity) : undefined
-      const avgPrice = props.holding.average_price ? Number(props.holding.average_price) : undefined
+      const quantityNum = Number(props.holding.quantity) || 0
       
       form.value = {
         asset_type: (props.holding as any).asset_type || 'gold',
@@ -260,15 +266,15 @@ watch(() => props.modelValue, (newVal) => {
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
         initial_investment: initialInvestment,
-        current_value: initialInvestment, // Same as initial at purchase time
+        current_value: 0, // Not stored, will be removed
         quantity: quantityNum,
-        average_price: avgPrice,
+        average_price: undefined,
         purchase_date: props.holding.purchase_date || new Date().toISOString().split('T')[0],
         notes: props.holding.notes || '',
         linked_allocation_id: props.holding.linked_allocation_id || undefined
       }
       initialDisplay.value = formatNumberInput(initialInvestment)
-      averagePriceDisplay.value = avgPrice ? formatNumberInput(avgPrice) : ''
+      averagePriceDisplay.value = ''
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -512,11 +518,14 @@ watch(() => props.modelValue, (newVal) => {
                 <VCol cols="12">
                   <VSelect
                     v-model="form.linked_allocation_id"
-                    label="Link to Budget Allocation (Optional)"
+                    label="Link to Budget Allocation"
                     :items="allocationItems"
                     variant="outlined"
-                    :disabled="submitting"
+                    :disabled="submitting || isFromAllocation"
+                    :readonly="isFromAllocation"
                     clearable
+                    :hint="isFromAllocation ? 'Auto-linked from allocation' : 'Optional'"
+                    persistent-hint
                   >
                     <template v-slot:prepend-inner>
                       <VIcon icon="mdi-link-variant" size="20" />

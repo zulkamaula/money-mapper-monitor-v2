@@ -18,36 +18,35 @@ const { selectedBook } = useMoneyBooks()
         </VCol>
       </VRow>
 
-      <!-- Investment Portfolio Summary (Full Width - only if enabled) -->
-      <VRow v-if="selectedBook?.has_investment_portfolio" class="mb-6">
+      <!-- Investment Portfolio Summary (Full Width) -->
+      <VRow v-if="selectedBook" class="mb-6">
         <VCol cols="12">
           <LazyPortfolioSummaryCard />
         </VCol>
       </VRow>
 
-      <!-- Main Content: 3 Equal Columns or 2 Columns (Budget-only) -->
+      <!-- Main Content: 3 Equal Columns -->
       <VRow v-if="selectedBook" class="dashboard-content-row">
-        <!-- Pockets Manager (1/3 or 1/3 of budget section) -->
+        <!-- Pockets Manager (1/3) -->
         <VCol 
           cols="12" 
-          :md="selectedBook.has_investment_portfolio ? 4 : 4"
+          md="4"
           class="dashboard-col"
         >
           <LazyPocketsManager />
         </VCol>
 
-        <!-- Allocations History (1/3 or 2/3 of budget section) -->
+        <!-- Allocations History (1/3) -->
         <VCol 
           cols="12" 
-          :md="selectedBook.has_investment_portfolio ? 4 : 8"
+          md="4"
           class="dashboard-col"
         >
           <LazyAllocationsHistory />
         </VCol>
 
-        <!-- Investment Holdings (1/3 - rightmost, only if enabled) -->
+        <!-- Investment Holdings (1/3) -->
         <VCol 
-          v-if="selectedBook.has_investment_portfolio" 
           cols="12" 
           md="4"
           class="dashboard-col"
