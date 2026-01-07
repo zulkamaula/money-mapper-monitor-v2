@@ -57,7 +57,7 @@ function toggleGroup(assetType: string) {
 <template>
   <div>
     <!-- Holdings Section -->
-    <VCard elevation="0" variant="flat" class="bg-surface rounded-lg border-primary border-opacity-10" :class="{ 'disabled-card': !loading && holdings.length === 0 }">
+    <VCard elevation="0" variant="flat" class="bg-surface border-primary border-opacity-10" :class="{ 'disabled-card': !loading && holdings.length === 0 }" style="border-radius: 16px;">
       <VCardTitle class="pa-5 cursor-pointer user-select-none d-md-cursor-default" @click="toggleExpand">
         <div class="d-flex align-center justify-space-between w-100 ga-3">
           <div class="flex-grow-1">
@@ -65,18 +65,14 @@ function toggleGroup(assetType: string) {
               <VIcon icon="mdi-briefcase" class="mr-2" color="primary" />
               Investment Holdings
             </div>
-            <!-- Mobile: Total invested -->
+            <!-- Mobile: Holdings count -->
             <div class="subtitle-stats d-md-none mt-1">
-              <VChip v-if="!loading" color="primary" variant="tonal" size="x-small">
-                {{ formatCurrency(holdings.reduce((sum, h) => sum + (Number(h.initial_investment) || 0), 0)) }}
-              </VChip>
+              {{ holdings.length }} {{ holdings.length === 1 ? 'holding' : 'holdings' }}
             </div>
           </div>
-          <!-- Desktop: Total invested -->
+          <!-- Desktop: Holdings count -->
           <div class="subtitle-stats-desktop d-none d-md-flex">
-            <VChip v-if="!loading" color="primary" variant="tonal" size="small">
-              {{ formatCurrency(holdings.reduce((sum, h) => sum + (Number(h.initial_investment) || 0), 0)) }}
-            </VChip>
+            {{ holdings.length }} {{ holdings.length === 1 ? 'holding' : 'holdings' }}
           </div>
           <!-- Mobile: Toggle button -->
           <VBtn class="d-md-none" :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="small"
@@ -206,6 +202,18 @@ function toggleGroup(assetType: string) {
 </template>
 
 <style scoped>
+.subtitle-stats {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 400;
+}
+
+.subtitle-stats-desktop {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 400;
+}
+
 /* Group card styling - match allocation cards */
 .group-card {
   background: rgba(15, 118, 110, 0.05);

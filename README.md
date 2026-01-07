@@ -98,13 +98,16 @@ m3-nuxt/
 │   ├── AllocationsHistory.vue
 │   ├── AppFooter.vue
 │   ├── AppNavbar.vue
+│   ├── AssetAllocationChart.vue
+│   ├── ComparisonChart.vue
 │   ├── HoldingDialog.vue
 │   ├── InvestmentPortfolio.vue
 │   ├── LegalDocument.vue
 │   ├── LoginForm.vue
 │   ├── MoneyBookSelector.vue
 │   ├── PocketsManager.vue
-│   └── PortfolioSummaryCard.vue
+│   ├── PortfolioSummaryCard.vue
+│   └── SimulateDialog.vue
 ├── layouts/              # Layout components
 │   ├── blank.vue        # Minimal layout (login)
 │   └── default.vue      # Main layout with navbar/footer
@@ -233,17 +236,24 @@ NEON_DATABASE_URL
 - Allocation tracking: Monitor how much budget is distributed to holdings
 - Purchase date tracking for historical analysis
 - **Simulate feature**: Calculate net wealth with current market prices (no external API)
-  - Uses stored average_price (purchase price) as baseline
+  - Uses stored average_price (purchase price) as baseline - pre-filled and readonly
   - Input current prices manually per holding
+  - Expandable holding cards for better mobile experience
   - Real-time profit/loss calculation with percentage display
-  - Comparison chart: Initial vs Current value trends
+  - Toggle Summary & Chart button to show/hide results
+  - Comparison chart (uPlot): Initial vs Current value line graph displayed inside dialog
   - Temporary calculation (not saved to database)
 
 ### Responsive Design
-- Mobile-first approach
-- Collapsible cards on mobile
+- Mobile-first approach with Vuetify utility classes
+- Collapsible cards on mobile (expandable asset groups, portfolio summary)
+- Desktop: Always expanded, mobile-only toggle buttons
+- Fullscreen dialogs on mobile (SimulateDialog)
+- Responsive padding: `pa-4 pa-sm-6` (16px → 24px)
+- Responsive text sizes: `text-subtitle-2 text-sm-subtitle-1`
+- Flexible layouts: `flex-wrap flex-sm-nowrap`
+- Dense rows and compact spacing on mobile
 - Sticky action buttons for better UX
-- Optimized text sizes and spacing
 
 ## 🚧 TODO: Allocation-Based Investment Workflow
 
@@ -331,44 +341,50 @@ WHERE average_price IS NULL;
 - [x] **Create SimulateDialog Component**
   - [x] New component: `components/SimulateDialog.vue`
   - [x] Aggregate all holdings from current money book
+  - [x] Expandable holding cards (similar to InvestmentPortfolio)
   - [x] For each holding, show:
-    - [x] Auto-filled readonly: Asset Type, Instrument, Platform, Initial Investment, Quantity
-    - [x] Editable inputs: Purchase Price (per unit), Current Market Price (per unit)
+    - [x] Header: Asset icon, Instrument, Platform, Initial Investment (≈), Quantity
+    - [x] Auto-filled readonly: Purchase Price (from average_price)
+    - [x] Editable input: Current Market Price (per unit) with numeric validation
+    - [x] Current Value & Profit/Loss displayed inline with colored alert
   - [x] Real-time calculation:
     - [x] Current Value = Quantity × Current Market Price
     - [x] Profit/Loss = Current Value - Initial Investment
     - [x] Profit % = (Profit/Loss ÷ Initial) × 100
-  - [x] Summary section: Total Initial, Total Current, Total Profit/Loss with %
+  - [x] Toggle button: Show/Hide Summary & Chart
+  - [x] Summary section with ComparisonChart:
+    - [x] Total Initial Investment, Total Current Value, Total Profit/Loss with %
+    - [x] uPlot line chart: Initial (teal dashed) vs Current (green/red solid)
   - [x] **Important**: No database save, calculation only
-  - [x] Added "Simulate Net Wealth" button in PortfolioSummaryCard
-  - [x] Dialog with scrollable holdings list
-  - [x] Individual profit display per holding
-  - [x] Aggregate summary at bottom
+  - [x] "Simulate Net Wealth" button in PortfolioSummaryCard opens dialog
+  - [x] Fullscreen dialog on mobile for better UX
+  - [x] Responsive padding and layout with Vuetify utilities
 
 ### Phase 4: Portfolio Summary UI Update (Priority: MEDIUM) ✅ COMPLETED
 - [x] **Update PortfolioSummaryCard Component**
-  - [x] Ensure 3 info cards layout:
-    - [x] Card 1: Total Initial Invested
-    - [x] Card 2: Total Current Value
-    - [x] Card 3: Profit/Loss (amount + percentage badge)
-  - [x] Default chart: Allocation distribution (donut chart)
-  - [x] Add "Simulate Net Wealth" button
-  - [x] After simulate: Auto-switch to comparison line chart
-    - [x] Teal line: Initial Investment (flat)
-    - [x] Green/Red line: Current Value (above/below initial)
-  - [x] Chart toggle between Allocation and Comparison
-  - [x] "Clear" button to reset simulation
+  - [x] 2-column responsive layout:
+    - [x] Column 1: Asset Allocation Chart (AssetAllocationChart with legend on left)
+    - [x] Column 2: Total Invested card + "Simulate Net Wealth" button (stacked)
+  - [x] Last updated timestamp from most recent holding update
+  - [x] Mobile: Collapsible with toggle button (hidden on desktop)
+  - [x] Desktop: Always expanded, no toggle button
+  - [x] Responsive padding and spacing with Vuetify utilities
+  - [x] "Simulate Net Wealth" button opens SimulateDialog
 - [x] **Create ComparisonChart Component**
   - [x] New component: `components/ComparisonChart.vue`
   - [x] Uses uPlot library for lightweight, fast rendering
-  - [x] Line chart with 2 series (Initial vs Current)
+  - [x] Line chart with 2 series:
+    - [x] Teal dashed line: Initial Investment (flat)
+    - [x] Green/Red solid line: Current Value (above/below initial)
   - [x] Responsive design with ResizeObserver
   - [x] Auto-update when data changes
-- [x] **Simulation State Management**
-  - [x] Added `simulationResult` state to `useInvestments`
-  - [x] `saveSimulationResult()` method to persist simulation
-  - [x] `clearSimulationResult()` method to reset
-  - [x] Auto-show comparison chart after simulation
+  - [x] Displayed INSIDE SimulateDialog (not in PortfolioSummaryCard)
+- [x] **Create AssetAllocationChart Component**
+  - [x] New component: `components/AssetAllocationChart.vue`
+  - [x] HTML5 Canvas 2D donut chart (no external library)
+  - [x] Legend positioned on left side of chart
+  - [x] Responsive layout: horizontal (desktop) / stacked (mobile)
+  - [x] Color-coded by asset type with percentage display
 
 ### Phase 5: Database Schema Cleanup & Migration (Priority: HIGH) ✅ COMPLETED
 - [x] **Simplify Holdings Table**
