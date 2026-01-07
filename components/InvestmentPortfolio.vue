@@ -73,14 +73,18 @@ function toggleGroup(assetType: string) {
               <VIcon icon="mdi-briefcase" class="mr-2" color="primary" />
               Investment Holdings
             </div>
-            <!-- Mobile: Holdings count -->
+            <!-- Mobile: Total invested -->
             <div class="subtitle-stats d-md-none mt-1">
-              {{ holdings.length }} holdings
+              <VChip v-if="!loading" color="primary" variant="tonal" size="x-small">
+                {{ formatCurrency(holdings.reduce((sum, h) => sum + h.initial_investment, 0)) }}
+              </VChip>
             </div>
           </div>
-          <!-- Desktop: Holdings count -->
-          <div class="subtitle-stats-desktop d-none d-md-block">
-            {{ holdings.length }} holdings
+          <!-- Desktop: Total invested -->
+          <div class="subtitle-stats-desktop d-none d-md-flex">
+            <VChip v-if="!loading" color="primary" variant="tonal" size="small">
+              {{ formatCurrency(holdings.reduce((sum, h) => sum + h.initial_investment, 0)) }}
+            </VChip>
           </div>
           <!-- Mobile: Toggle button -->
           <VBtn class="d-md-none" :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="small"
@@ -92,14 +96,7 @@ function toggleGroup(assetType: string) {
 
       <!-- Shared Content: Desktop always visible, Mobile collapsible -->
       <Transition name="expand">
-        <VCardText v-show="isExpanded" class="px-6 pb-6 pt-0 holdings-content">
-          <!-- Add New Button - Sticky -->
-          <div v-if="holdings.length > 0" class="sticky-top bg-surface pa-4 mx-n6">
-            <VBtn color="primary" variant="flat" rounded="pill" block class="text-none" @click="openCreateDialog">
-              <VIcon icon="mdi-plus" start />
-              Add New Holding
-            </VBtn>
-          </div>
+        <VCardText v-show="isExpanded" class="pa-6 holdings-content">
 
           <!-- Loading State -->
           <div v-if="loading" class="py-4">
@@ -111,12 +108,14 @@ function toggleGroup(assetType: string) {
             <VIcon icon="mdi-briefcase-off-outline" size="48" color="grey-lighten-1" class="mb-4" />
             <p class="text-h6 text-medium-emphasis mb-2">No Holdings Yet</p>
             <p class="text-caption text-medium-emphasis mb-4">
-              Start tracking your investments by adding your first holding
+              Create holdings from your budget allocations in the Allocation Card
             </p>
-            <VBtn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog" class="text-none" rounded="pill"
-              size="small">
-              Add First Holding
-            </VBtn>
+            <VAlert color="info" variant="tonal" class="mx-auto" style="max-width: 500px;">
+              <div class="text-caption">
+                <VIcon icon="mdi-information" size="small" class="mr-1" />
+                Holdings can only be created from allocations (allocation-first workflow)
+              </div>
+            </VAlert>
           </div>
 
           <!-- Holdings List -->
@@ -153,7 +152,7 @@ function toggleGroup(assetType: string) {
                               </template>
                               <VList density="compact">
                                 <VListItem @click="openEditDialog(holding)">
-                                  <VListItemTitle>Update Value</VListItemTitle>
+                                  <VListItemTitle>Edit</VListItemTitle>
                                 </VListItem>
                                 <VDivider />
                                 <VListItem @click="handleDeleteHolding(holding)">
@@ -175,25 +174,9 @@ function toggleGroup(assetType: string) {
 
                           <!-- Values -->
                           <!-- Investment Info -->
-                          <div class="d-flex flex-wrap ga-3 mb-3">
-                            <div class="flex-grow-1">
-                              <div class="text-caption text-medium-emphasis mb-1">Invested</div>
-                              <div class="text-body-2 font-weight-medium">
-                                {{ formatCurrency(holding.initial_investment) }}
-                              </div>
-                            </div>
-                            <div v-if="holding.quantity" class="flex-grow-1">
-                              <div class="text-caption text-medium-emphasis mb-1">Quantity</div>
-                              <div class="text-body-2 font-weight-medium">
-                                {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'lot' }}
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- Additional Info -->
-                          <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis mb-3">
-                            <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
-                            Linked to Budget
+                          <div class="text-caption text-medium-emphasis mb-1">Invested</div>
+                          <div class="text-body-2 font-weight-medium mb-3">
+                            {{ formatCurrency(holding.initial_investment) }}
                           </div>
 
                           <!-- Note: Profit/Loss will be shown in Simulate dialog (Phase 3) -->
@@ -205,10 +188,14 @@ function toggleGroup(assetType: string) {
                           </VAlert>
 
                           <!-- Optional Info -->
-                          <div v-if="holding.quantity || holding.notes" class="mt-3 pt-3 border-t border-opacity-10">
+                          <div v-if="holding.quantity || holding.notes || holding.linked_allocation_id" class="mt-3 pt-3 border-t border-opacity-10">
                             <div v-if="holding.quantity" class="text-caption text-medium-emphasis">
                               <VIcon :icon="getAssetIcon(holding.asset_type as string)" size="x-small" class="mr-1" />
                               {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
+                            </div>
+                            <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis my-1">
+                              <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
+                              Linked to Budget
                             </div>
                             <p v-if="holding.notes" class="text-caption text-medium-emphasis mt-1">
                               {{ holding.notes }}

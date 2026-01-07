@@ -10,7 +10,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { holdings, loading } = useInvestments()
+const { holdings, loading, saveSimulationResult } = useInvestments()
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -123,6 +123,17 @@ function getProfitColor(profit: number) {
 }
 
 function handleClose() {
+  dialog.value = false
+}
+
+function handleSaveAndClose() {
+  // Save simulation result to composable state
+  saveSimulationResult({
+    totalInitial: totalInitialInvestment.value,
+    totalCurrent: totalCurrentValue.value,
+    totalProfit: totalProfit.value,
+    profitPercentage: totalProfitPercentage.value
+  })
   dialog.value = false
 }
 
@@ -308,6 +319,14 @@ watch(() => props.modelValue, (newVal) => {
         <VSpacer />
         <VBtn color="grey" variant="text" @click="handleClose">
           Close
+        </VBtn>
+        <VBtn 
+          v-if="totalCurrentValue > 0"
+          color="primary" 
+          variant="flat" 
+          @click="handleSaveAndClose"
+        >
+          Save & View Chart
         </VBtn>
       </VCardActions>
     </VCard>

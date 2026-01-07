@@ -10,9 +10,7 @@ export default defineEventHandler(async (event) => {
     platform: string
     instrument_name: string
     initial_investment: number
-    current_value: number
-    quantity?: number
-    average_price?: number
+    average_price: number
     purchase_date?: string
     notes?: string
     linked_allocation_id?: string
@@ -24,9 +22,7 @@ export default defineEventHandler(async (event) => {
     asset_name,
     platform, 
     instrument_name, 
-    initial_investment, 
-    current_value,
-    quantity,
+    initial_investment,
     average_price,
     purchase_date,
     notes,
@@ -34,13 +30,20 @@ export default defineEventHandler(async (event) => {
   } = body
 
   if (!money_book_id || !asset_type || !asset_name || !platform || !instrument_name || 
-      initial_investment === undefined || current_value === undefined) {
+      initial_investment === undefined || average_price === undefined) {
     throw createError({ status: 400, statusText: 'Missing required fields' })
   }
 
-  if (initial_investment < 0 || current_value < 0) {
-    throw createError({ status: 400, statusText: 'Investment amounts must be positive' })
+  if (initial_investment < 0) {
+    throw createError({ status: 400, statusText: 'Investment amount must be positive' })
   }
+
+  if (average_price <= 0) {
+    throw createError({ status: 400, statusText: 'Average price must be greater than 0' })
+  }
+
+  // Auto-calculate quantity from initial investment and average price
+  const quantity = initial_investment / average_price
 
   const db = sql()
   
@@ -107,16 +110,16 @@ export default defineEventHandler(async (event) => {
   const holding = await db`
     INSERT INTO public.holdings (
       id, asset_id, platform, instrument_name, 
-      initial_investment, current_value, quantity, average_price, 
+      initial_investment, average_price, quantity, 
       purchase_date, notes, linked_allocation_id
     )
     VALUES (
       uuid_generate_v4()::TEXT, ${assetId}, ${platform}, ${instrument_name},
-      ${initial_investment}, ${current_value}, ${quantity || null}, ${average_price || null},
+      ${initial_investment}, ${average_price}, ${quantity},
       ${purchase_date || null}, ${notes || null}, ${linked_allocation_id || null}
     )
     RETURNING id, asset_id, platform, instrument_name, 
-              initial_investment, current_value, quantity, average_price,
+              initial_investment, average_price, quantity,
               purchase_date, notes, linked_allocation_id, last_updated, created_at
   `
   

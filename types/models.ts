@@ -61,6 +61,7 @@ export interface Holding {
   platform: string
   instrument_name: string
   initial_investment: number
+  average_price?: number
   quantity: number
   purchase_date?: string
   notes?: string

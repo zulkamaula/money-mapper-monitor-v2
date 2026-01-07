@@ -326,18 +326,30 @@ NEON_DATABASE_URL
   - [x] Individual profit display per holding
   - [x] Aggregate summary at bottom
 
-### Phase 4: Portfolio Summary UI Update (Priority: MEDIUM)
-- [ ] **Update PortfolioSummaryCard Component**
-  - [ ] Ensure 3 info cards layout:
-    - [ ] Card 1: Total Initial Invested
-    - [ ] Card 2: Total Current Value
-    - [ ] Card 3: Profit/Loss (amount + percentage badge)
-  - [ ] Default chart: Allocation distribution (bar/pie chart)
-  - [ ] Add "Simulate Net Wealth" button (bottom right of card)
-  - [ ] After simulate: Switch chart to comparison line chart
-    - [ ] Blue line: Initial Investment (flat)
-    - [ ] Green/Red line: Current Value (above/below initial)
-  - [ ] Chart toggle or auto-switch based on simulate state
+### Phase 4: Portfolio Summary UI Update (Priority: MEDIUM) ✅ COMPLETED
+- [x] **Update PortfolioSummaryCard Component**
+  - [x] Ensure 3 info cards layout:
+    - [x] Card 1: Total Initial Invested
+    - [x] Card 2: Total Current Value
+    - [x] Card 3: Profit/Loss (amount + percentage badge)
+  - [x] Default chart: Allocation distribution (donut chart)
+  - [x] Add "Simulate Net Wealth" button
+  - [x] After simulate: Auto-switch to comparison line chart
+    - [x] Teal line: Initial Investment (flat)
+    - [x] Green/Red line: Current Value (above/below initial)
+  - [x] Chart toggle between Allocation and Comparison
+  - [x] "Clear" button to reset simulation
+- [x] **Create ComparisonChart Component**
+  - [x] New component: `components/ComparisonChart.vue`
+  - [x] Uses uPlot library for lightweight, fast rendering
+  - [x] Line chart with 2 series (Initial vs Current)
+  - [x] Responsive design with ResizeObserver
+  - [x] Auto-update when data changes
+- [x] **Simulation State Management**
+  - [x] Added `simulationResult` state to `useInvestments`
+  - [x] `saveSimulationResult()` method to persist simulation
+  - [x] `clearSimulationResult()` method to reset
+  - [x] Auto-show comparison chart after simulation
 
 ### Phase 5: Database Schema Cleanup & Migration (Priority: HIGH) ✅ COMPLETED
 - [x] **Simplify Holdings Table**

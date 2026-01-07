@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity } from '~/utils/format'
+import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity, formatDateInput } from '~/utils/format'
 import type { Holding, Allocation } from '~/types/models'
 import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/constants/investmentOptions'
 
@@ -31,10 +31,9 @@ const form = ref({
   platform: null as string | null,
   instrument_name: null as string | null,
   initial_investment: 0,
-  current_value: 0,
-  quantity: undefined as number | undefined,
   average_price: undefined as number | undefined,
-  purchase_date: new Date().toISOString().split('T')[0],
+  quantity: 0,
+  purchase_date: formatDateInput(null),
   notes: '',
   linked_allocation_id: undefined as string | undefined
 })
@@ -91,24 +90,20 @@ watch(() => form.value.instrument_name, (newInstrument) => {
   }
 })
 
-// Auto-calculate Quantity when Initial Investment or Average Price changes
-watch([() => form.value.initial_investment, () => form.value.average_price], ([initial, avgPrice]) => {
-  if (initial > 0 && avgPrice && avgPrice > 0) {
-    form.value.quantity = initial / avgPrice
-  } else {
-    form.value.quantity = undefined
-  }
-})
-
-// Auto-set Current Value = Initial Investment (same at purchase time)
-watch(() => form.value.initial_investment, (initial) => {
-  form.value.current_value = initial
-})
+// Note: Quantity is manual input from user, not auto-calculated
 
 const initialDisplay = ref('')
 const averagePriceDisplay = ref('')
 const submitting = ref(false)
 const currentStep = ref(1)
+
+// Auto-calculated quantity (readonly)
+const calculatedQuantity = computed(() => {
+  if (form.value.average_price && form.value.average_price > 0) {
+    return form.value.initial_investment / form.value.average_price
+  }
+  return 0
+})
 
 function handleInitialInput(event: Event) {
   const input = event.target as HTMLInputElement
@@ -118,11 +113,11 @@ function handleInitialInput(event: Event) {
 }
 
 
-function handleAveragePriceInput(event: Event) {
+function handleQuantityInput(event: Event) {
   const input = event.target as HTMLInputElement
   const parsed = parseNumberInput(input.value)
-  form.value.average_price = parsed > 0 ? parsed : undefined
-  averagePriceDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  form.value.quantity = parsed > 0 ? parsed : undefined
+  quantityDisplay.value = parsed > 0 ? formatQuantity(parsed) : ''
 }
 
 const allocationItems = computed(() => [
@@ -140,15 +135,13 @@ function resetForm() {
     platform: null,
     instrument_name: null,
     initial_investment: 0,
-    current_value: 0,
     quantity: undefined,
-    average_price: undefined,
-    purchase_date: new Date().toISOString().split('T')[0],
+    purchase_date: formatDateInput(null),
     notes: '',
     linked_allocation_id: undefined
   }
   initialDisplay.value = ''
-  averagePriceDisplay.value = ''
+  quantityDisplay.value = ''
   submitting.value = false
   currentStep.value = 1
 }
@@ -174,7 +167,7 @@ const canProceedStep1 = computed(() => {
 const isFromAllocation = computed(() => !!props.allocationContext)
 
 const canProceedStep2 = computed(() => {
-  return form.value.initial_investment > 0 && form.value.average_price && form.value.average_price > 0
+  return form.value.initial_investment > 0 && form.value.quantity && form.value.quantity > 0
 })
 
 // Auto-scroll stepper header on mobile
@@ -223,8 +216,9 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (isEditMode.value && props.holding) {
-      // Update mode - only update mutable fields
+      // Update mode - update all mutable financial fields
       await updateHolding(props.holding.id, {
+        initial_investment: form.value.initial_investment,
         quantity: form.value.quantity!,
         purchase_date: form.value.purchase_date,
         notes: form.value.notes
@@ -256,7 +250,6 @@ watch(() => props.modelValue, (newVal) => {
       currentStep.value = 1
     } else if (props.holding) {
       // Edit mode - populate form with holding data
-      // Parse all number values explicitly to prevent string concatenation
       const initialInvestment = Number(props.holding.initial_investment) || 0
       const quantityNum = Number(props.holding.quantity) || 0
       
@@ -266,15 +259,13 @@ watch(() => props.modelValue, (newVal) => {
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
         initial_investment: initialInvestment,
-        current_value: 0, // Not stored, will be removed
         quantity: quantityNum,
-        average_price: undefined,
-        purchase_date: props.holding.purchase_date || new Date().toISOString().split('T')[0],
+        purchase_date: formatDateInput(props.holding.purchase_date),
         notes: props.holding.notes || '',
         linked_allocation_id: props.holding.linked_allocation_id || undefined
       }
       initialDisplay.value = formatNumberInput(initialInvestment)
-      averagePriceDisplay.value = ''
+      quantityDisplay.value = quantityNum > 0 ? formatQuantity(quantityNum) : ''
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -339,6 +330,13 @@ watch(() => props.modelValue, (newVal) => {
             <VStepperWindow class="ma-0 pt-2">
             <!-- Step 1: Asset Information -->
             <VStepperWindowItem :value="1">
+              <VAlert v-if="isEditMode" color="info" variant="tonal" class="mb-4">
+                <div class="text-caption">
+                  <VIcon icon="mdi-information" size="small" class="mr-1" />
+                  Instrument and Platform cannot be changed. Create a new holding if needed.
+                </div>
+              </VAlert>
+              
               <VRow>
                 <!-- Instrument (grouped by asset type) -->
                 <VCol cols="12" md="6">
@@ -353,6 +351,7 @@ watch(() => props.modelValue, (newVal) => {
                     persistent-hint
                     variant="outlined"
                     :disabled="isEditMode || submitting"
+                    :readonly="isEditMode"
                     clearable
                   >
                     <template v-slot:prepend-inner>
@@ -378,6 +377,7 @@ watch(() => props.modelValue, (newVal) => {
                     placeholder="Select or type platform name"
                     variant="outlined"
                     :disabled="isEditMode || submitting"
+                    :readonly="isEditMode"
                     clearable
                   >
                     <template v-slot:prepend-inner>
@@ -390,6 +390,13 @@ watch(() => props.modelValue, (newVal) => {
 
             <!-- Step 2: Financial Values -->
             <VStepperWindowItem :value="2">
+              <VAlert v-if="isEditMode" color="info" variant="tonal" class="mb-4">
+                <div class="text-caption">
+                  <VIcon icon="mdi-information" size="small" class="mr-1" />
+                  You can edit all financial values. Instrument, Platform, and Allocation Link are locked.
+                </div>
+              </VAlert>
+              
               <VRow>
                 <!-- Row 1: Initial Investment | Purchase Date -->
                 <VCol cols="12" md="6">
@@ -432,36 +439,31 @@ watch(() => props.modelValue, (newVal) => {
                   />
                 </VCol>
 
-                <!-- Row 2: Average Price with inline sync button -->
+                <!-- Row 2: Quantity (manual input) -->
                 <VCol cols="12" md="6">
                   <VTextField
-                    v-model="averagePriceDisplay"
-                    label="Average Price"
+                    v-model="quantityDisplay"
+                    label="Quantity"
                     placeholder="0"
                     variant="outlined"
-                    prefix="Rp"
-                    inputmode="numeric"
-                    :disabled="submitting"
-                    @input="handleAveragePriceInput"
+                    inputmode="decimal"
+                    :disabled="isEditMode ? false : submitting"
+                    @input="handleQuantityInput"
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
                           <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <VCard class="pa-3" style="max-width: 340px;">
-                          <div class="text-caption font-weight-bold mb-1">Price per unit at purchase</div>
+                        <VCard class="pa-3" style="max-width: 300px;">
+                          <div class="text-caption font-weight-bold mb-1">Amount you own</div>
                           <div class="text-caption">
-                            <strong>Input Format (IDR):</strong><br>
-                            • Use dots for thousands: 2.400.000 = 2.4M<br>
-                            • No comma for decimals in input<br><br>
-                            <strong>For Non-IDR Currency (USD, etc):</strong><br>
-                            Convert to IDR first using current exchange rate<br>
-                            Example: US Stock $50/share × 15.800 = Rp 790.000<br><br>
-                            <strong>Current Market Reference (Jan 2026):</strong><br>
-                            • Gold: ~Rp 2.516.000/gram<br>
-                            • Stock IDX (BBCA): ~Rp 10.000/share<br>
-                            • Stock US (AAPL): ~$200 = Rp 3.160.000/share
+                            <strong>Examples:</strong><br>
+                            • Gold: 10 (gram)<br>
+                            • Stock: 100 (shares)<br>
+                            • ETF: 5 (units)<br>
+                            • Mutual Fund: 1000 (units)<br><br>
+                            <strong>Note:</strong> Use Simulate dialog to input prices and calculate profit/loss
                           </div>
                         </VCard>
                       </VMenu>
@@ -469,45 +471,6 @@ watch(() => props.modelValue, (newVal) => {
                   </VTextField>
                 </VCol>
 
-                <!-- Row 3: Quantity (auto-calculated) -->
-                <VCol cols="12" md="6">
-                  <VTextField
-                    :model-value="formatQuantity(form.quantity)"
-                    :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity (lot)'"
-                    placeholder="Auto-calculated from Initial ÷ Average Price"
-                    variant="outlined"
-                    inputmode="numeric"
-                    :suffix="form.asset_type === 'gold' ? 'gram' : 'lot'"
-                    readonly
-                    :disabled="submitting"
-                    base-color="primary"
-                  >
-                    <template v-slot:append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
-                        </template>
-                        <VCard class="pa-3" style="max-width: 360px;">
-                          <div class="text-caption font-weight-bold mb-1">Auto-calculated quantity</div>
-                          <div class="text-caption">
-                            <strong>Formula:</strong> Initial Investment ÷ Average Price<br><br>
-                            <strong>Note on Format:</strong><br>
-                            • Comma (,) = decimal separator<br>
-                            • Dot (.) = thousand separator<br>
-                            • No trailing zeros shown<br><br>
-                            <strong>Stock/ETF Lot Info:</strong><br>
-                            1 lot typically = 100 shares (IDX)<br>
-                            US stocks usually fractional shares allowed<br><br>
-                            <strong>Examples:</strong><br>
-                            • Gold: Rp 1.258.000 ÷ Rp 2.516.000/g = <strong>0,5 gram</strong><br>
-                            • Stock: Rp 1.000.000 ÷ Rp 10.000/share = <strong>100 lot</strong><br>
-                            • Partial: Rp 500.000 ÷ Rp 10.000/share = <strong>50 lot</strong>
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
               </VRow>
             </VStepperWindowItem>
 
@@ -521,10 +484,10 @@ watch(() => props.modelValue, (newVal) => {
                     label="Link to Budget Allocation"
                     :items="allocationItems"
                     variant="outlined"
-                    :disabled="submitting || isFromAllocation"
-                    :readonly="isFromAllocation"
+                    :disabled="submitting || isFromAllocation || isEditMode"
+                    :readonly="isFromAllocation || isEditMode"
                     clearable
-                    :hint="isFromAllocation ? 'Auto-linked from allocation' : 'Optional'"
+                    :hint="isEditMode ? 'Cannot change allocation link' : (isFromAllocation ? 'Auto-linked from allocation' : 'Optional')"
                     persistent-hint
                   >
                     <template v-slot:prepend-inner>

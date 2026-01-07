@@ -4,9 +4,8 @@ import { sql } from '../utils/db';
 
 export default defineEventHandler(async (event) => {
   const { userId } = requireAuth(event);
-  const body = await readBody<{ name: string; has_investment_portfolio?: boolean }>(event);
+  const body = await readBody<{ name: string }>(event);
   const name = String(body?.name || '').trim();
-  const hasInvestmentPortfolio = Boolean(body?.has_investment_portfolio);
   if (!name) throw createError({ status: 400, statusText: 'Name required' });
 
   const db = sql();
@@ -20,9 +19,9 @@ export default defineEventHandler(async (event) => {
   
   // Insert new book at position 0 (top)
   const rows = await db`
-    INSERT INTO public.money_books (id, user_id, name, has_investment_portfolio, order_index)
-    VALUES (uuid_generate_v4()::TEXT, ${userId}, ${name}, ${hasInvestmentPortfolio}, 0)
-    RETURNING id, name, has_investment_portfolio, order_index, created_at
+    INSERT INTO public.money_books (id, user_id, name, order_index)
+    VALUES (uuid_generate_v4()::TEXT, ${userId}, ${name}, 0)
+    RETURNING id, name, order_index, created_at
   `;
   return rows[0];
 });

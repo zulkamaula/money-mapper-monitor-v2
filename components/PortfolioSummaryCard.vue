@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/format'
 
-const { totalInvested, loading, assetAllocationData, holdings } = useInvestments()
+const { totalInvested, loading, assetAllocationData, holdings, simulationResult, clearSimulationResult } = useInvestments()
 
 const isExpanded = ref(false)
 const showSimulateDialog = ref(false)
+const showComparisonChart = ref(false)
 
-// Note: Profit calculations will be added in Phase 3 (Simulate Dialog)
-// const profitColor = computed(() => {
-//   return totalProfit.value >= 0 ? 'success' : 'error'
-// })
-//
-// const profitIcon = computed(() => {
-//   return totalProfit.value >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'
-// })
+const hasSimulation = computed(() => !!simulationResult.value)
+
+const profitColor = computed(() => {
+  if (!simulationResult.value) return 'primary'
+  return simulationResult.value.totalProfit >= 0 ? 'success' : 'error'
+})
+
+const profitIcon = computed(() => {
+  if (!simulationResult.value) return 'mdi-calculator'
+  return simulationResult.value.totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'
+})
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
@@ -22,6 +26,22 @@ function toggleExpand() {
 function openSimulateDialog() {
   showSimulateDialog.value = true
 }
+
+function toggleChart() {
+  showComparisonChart.value = !showComparisonChart.value
+}
+
+function handleClearSimulation() {
+  clearSimulationResult()
+  showComparisonChart.value = false
+}
+
+// Auto-show comparison chart after simulation
+watch(() => simulationResult.value, (newVal) => {
+  if (newVal) {
+    showComparisonChart.value = true
+  }
+})
 </script>
 
 <template>
@@ -73,41 +93,66 @@ function openSimulateDialog() {
           </VRow>
         </div>
 
+        <!-- 3-Card Layout: Show when simulation exists -->
+        <VRow v-else-if="hasSimulation && simulationResult">
+          <!-- Total Invested -->
+          <VCol cols="12" md="4">
+            <div class="metric-card">
+              <div class="metric-label text-caption text-medium-emphasis mb-1">
+                Total Invested
+              </div>
+              <div class="metric-value text-h6 font-weight-bold text-primary">
+                {{ formatCurrency(simulationResult.totalInitial) }}
+              </div>
+            </div>
+          </VCol>
+
+          <!-- Current Value -->
+          <VCol cols="12" md="4">
+            <div class="metric-card">
+              <div class="metric-label text-caption text-medium-emphasis mb-1">
+                Current Value
+              </div>
+              <div class="metric-value text-h6 font-weight-bold">
+                {{ formatCurrency(simulationResult.totalCurrent) }}
+              </div>
+            </div>
+          </VCol>
+
+          <!-- Profit/Loss -->
+          <VCol cols="12" md="4">
+            <div class="metric-card">
+              <div class="metric-label text-caption text-medium-emphasis mb-1">
+                Profit/Loss
+              </div>
+              <div class="metric-value text-h6 font-weight-bold" :class="`text-${profitColor}`">
+                {{ simulationResult.totalProfit >= 0 ? '+' : '' }}{{ formatCurrency(simulationResult.totalProfit) }}
+              </div>
+              <VChip 
+                :color="profitColor" 
+                size="small" 
+                variant="flat"
+                class="mt-2"
+              >
+                <VIcon :icon="profitIcon" start size="small" />
+                {{ simulationResult.totalProfit >= 0 ? '+' : '' }}{{ simulationResult.profitPercentage.toFixed(2) }}%
+              </VChip>
+            </div>
+          </VCol>
+        </VRow>
+
+        <!-- Single Card: Show when no simulation -->
         <VRow v-else>
-        <!-- Total Invested -->
-        <VCol cols="12">
-          <div class="metric-card">
-            <div class="metric-label text-caption text-medium-emphasis mb-1">
-              Total Invested
+          <VCol cols="12">
+            <div class="metric-card">
+              <div class="metric-label text-caption text-medium-emphasis mb-1">
+                Total Invested
+              </div>
+              <div class="metric-value text-h6 font-weight-bold text-primary">
+                {{ loading ? '...' : formatCurrency(totalInvested) }}
+              </div>
             </div>
-            <div class="metric-value text-h6 font-weight-bold text-primary">
-              {{ loading ? '...' : formatCurrency(totalInvested) }}
-            </div>
-          </div>
-        </VCol>
-
-        <!-- Note: Current Value and Profit/Loss will be added in Phase 3 (Simulate Dialog) -->
-        <!-- <VCol cols="12" md="4">
-          <div class="metric-card">
-            <div class="metric-label text-caption text-medium-emphasis mb-1">
-              Current Value
-            </div>
-            <div class="metric-value text-h6 font-weight-bold">
-              {{ loading ? '...' : formatCurrency(currentValue) }}
-            </div>
-          </div>
-        </VCol>
-
-        <VCol cols="12" md="4">
-          <div class="metric-card">
-            <div class="metric-label text-caption text-medium-emphasis mb-1">
-              Profit/Loss
-            </div>
-            <div class="metric-value text-h6 font-weight-bold" :class="`text-${profitColor}`">
-              {{ loading ? '...' : formatCurrency(totalProfit) }}
-            </div>
-          </div>
-        </VCol> -->
+          </VCol>
         </VRow>
 
         <!-- Simulate Button -->
@@ -124,10 +169,52 @@ function openSimulateDialog() {
           </VBtn>
         </div>
 
-        <!-- Asset Allocation Chart -->
-        <VDivider v-if="Object.keys(assetAllocationData).length > 0" class="my-4" />
+        <!-- Chart Section -->
+        <VDivider v-if="Object.keys(assetAllocationData).length > 0 || hasSimulation" class="my-4" />
         
-        <div v-if="Object.keys(assetAllocationData).length > 0" class="chart-section">
+        <!-- Chart Toggle & Clear (only show when simulation exists) -->
+        <div v-if="hasSimulation" class="d-flex justify-space-between align-center mb-3">
+          <VBtnToggle
+            v-model="showComparisonChart"
+            mandatory
+            density="compact"
+            color="primary"
+          >
+            <VBtn :value="false" size="small">
+              <VIcon icon="mdi-chart-donut" size="small" class="mr-1" />
+              Allocation
+            </VBtn>
+            <VBtn :value="true" size="small">
+              <VIcon icon="mdi-chart-line" size="small" class="mr-1" />
+              Comparison
+            </VBtn>
+          </VBtnToggle>
+          
+          <VBtn
+            size="small"
+            variant="text"
+            color="error"
+            @click="handleClearSimulation"
+          >
+            <VIcon icon="mdi-close" size="small" class="mr-1" />
+            Clear
+          </VBtn>
+        </div>
+
+        <!-- Comparison Chart (show when simulation exists and toggle is on) -->
+        <div v-if="hasSimulation && showComparisonChart && simulationResult" class="chart-section">
+          <div class="d-flex align-center mb-3">
+            <VIcon icon="mdi-chart-line" size="20" color="primary" class="mr-2" />
+            <span class="text-subtitle-2 font-weight-semibold">Investment Performance</span>
+          </div>
+          <ComparisonChart 
+            :initial-investment="simulationResult.totalInitial"
+            :current-value="simulationResult.totalCurrent"
+          />
+        </div>
+
+        <!-- Asset Allocation Chart (default, or when toggle is off) -->
+        <div v-if="Object.keys(assetAllocationData).length > 0 && (!hasSimulation || !showComparisonChart)" class="chart-section">
           <div class="d-flex align-center mb-3">
             <VIcon icon="mdi-chart-donut" size="20" color="primary" class="mr-2" />
             <span class="text-subtitle-2 font-weight-semibold">Asset Allocation</span>

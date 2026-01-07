@@ -9,6 +9,15 @@ export const useInvestments = () => {
   const portfolio = useState<InvestmentPortfolio | null>('investment-portfolio', () => null)
   const holdings = useState<Holding[]>('investment-holdings', () => [])
   const loading = useState('investment-loading', () => false)
+  
+  // Simulation state (not persisted to database)
+  const simulationResult = useState<{
+    totalInitial: number
+    totalCurrent: number
+    totalProfit: number
+    profitPercentage: number
+    timestamp: number
+  } | null>('simulation-result', () => null)
 
   // AbortController for cancellable requests
   let abortController: AbortController | null = null
@@ -147,8 +156,9 @@ export const useInvestments = () => {
     }
   }
 
-  // Update holding - only update mutable fields
+  // Update holding - update all mutable financial fields
   async function updateHolding(holdingId: string, data: {
+    initial_investment?: number
     quantity: number
     purchase_date?: string
     notes?: string
@@ -216,22 +226,43 @@ export const useInvestments = () => {
     }
   }, { immediate: true })
 
+  // Save simulation result
+  function saveSimulationResult(data: {
+    totalInitial: number
+    totalCurrent: number
+    totalProfit: number
+    profitPercentage: number
+  }) {
+    simulationResult.value = {
+      ...data,
+      timestamp: Date.now()
+    }
+  }
+
+  // Clear simulation result
+  function clearSimulationResult() {
+    simulationResult.value = null
+  }
+
   return {
     // State
     portfolio,
     holdings,
     loading,
-    
+    simulationResult,
+
     // Computed
     totalInvested,
     holdingsByAsset,
     assetAllocationData,
-    
+
     // Methods
     loadInvestments,
     createHolding,
     updateHolding,
     deleteHolding,
-    handleDeleteHolding
+    handleDeleteHolding,
+    saveSimulationResult,
+    clearSimulationResult
   }
 }

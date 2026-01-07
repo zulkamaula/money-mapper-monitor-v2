@@ -47,6 +47,29 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
+ * Convert date to YYYY-MM-DD format for input fields
+ * Handles string, Date object, null, or undefined
+ * Examples:
+ * - "2025-01-15T00:00:00.000Z" → "2025-01-15"
+ * - new Date("2025-01-15") → "2025-01-15"
+ * - null → today's date
+ */
+export function formatDateInput(date: string | Date | null | undefined): string {
+  if (!date) {
+    return new Date().toISOString().split('T')[0]!
+  }
+  
+  const d = typeof date === 'string' ? new Date(date) : date
+  
+  // Validate date
+  if (isNaN(d.getTime())) {
+    return new Date().toISOString().split('T')[0]!
+  }
+  
+  return d.toISOString().split('T')[0]!
+}
+
+/**
  * Format number input with thousand separators (for display in input fields)
  * Examples:
  * - 1000 → "1.000"
