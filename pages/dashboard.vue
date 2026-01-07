@@ -6,6 +6,7 @@ definePageMeta({
 
 // Use composables for state management
 const { selectedBook } = useMoneyBooks()
+const { holdings } = useInvestments()
 </script>
 
 <template>
@@ -18,8 +19,8 @@ const { selectedBook } = useMoneyBooks()
         </VCol>
       </VRow>
 
-      <!-- Investment Portfolio Summary (Full Width) -->
-      <VRow v-if="selectedBook" class="mb-6">
+      <!-- Investment Portfolio Summary (Full Width) - Only show when holdings exist -->
+      <VRow v-if="selectedBook && holdings.length > 0" class="mb-6">
         <VCol cols="12">
           <LazyPortfolioSummaryCard />
         </VCol>

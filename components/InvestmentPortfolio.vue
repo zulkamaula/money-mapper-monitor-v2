@@ -57,7 +57,7 @@ function toggleGroup(assetType: string) {
 <template>
   <div>
     <!-- Holdings Section -->
-    <VCard elevation="0" variant="flat" class="bg-surface rounded-lg border-primary border-opacity-10">
+    <VCard elevation="0" variant="flat" class="bg-surface rounded-lg border-primary border-opacity-10" :class="{ 'disabled-card': !loading && holdings.length === 0 }">
       <VCardTitle class="pa-5 cursor-pointer user-select-none d-md-cursor-default" @click="toggleExpand">
         <div class="d-flex align-center justify-space-between w-100 ga-3">
           <div class="flex-grow-1">
@@ -275,5 +275,12 @@ function toggleGroup(assetType: string) {
     display: block !important;
     opacity: 1 !important;
   }
+}
+
+/* Disabled card appearance when no holdings */
+.disabled-card {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
 }
 </style>

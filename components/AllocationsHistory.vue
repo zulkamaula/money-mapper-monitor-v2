@@ -6,27 +6,15 @@ import { formatPercentage, formatCurrency, formatDate } from '~/utils/format'
 const { selectedBook } = useMoneyBooks()
 const { pockets } = usePockets()
 const { allocations, loading, loadAllocations, deleteAllocation } = useAllocations()
-const { holdings } = useInvestments()
+const { holdings, loadInvestments } = useInvestments()
 const { success: showSuccess, error: showError } = useNotification()
 const { showDialog: showConfirmDialog } = useConfirmDialog()
-
-// Initialize on mount
-onMounted(async () => {
-  if (selectedBook.value) {
-    await loadAllocations()
-    // Also load holdings to track allocation distribution
-    const { loadInvestments } = useInvestments()
-    await loadInvestments(selectedBook.value.id)
-  }
-})
 
 // Reload when selected book changes
 watch(() => selectedBook.value, async (newBook) => {
   if (newBook) {
     await loadAllocations()
-    // Also reload holdings for allocation tracking
-    const { loadInvestments } = useInvestments()
-    await loadInvestments(newBook.id)
+    // Holdings are loaded automatically by useInvestments watcher
   }
 }, { immediate: true })
 
@@ -80,7 +68,6 @@ function handleAddInvestHolding(allocation: Allocation) {
 watch(showHoldingDialog, async (isOpen) => {
   if (!isOpen && selectedBook.value) {
     // Reload holdings to update remaining amounts
-    const { loadInvestments } = useInvestments()
     await loadInvestments(selectedBook.value.id)
     selectedAllocationForHolding.value = null
   }

@@ -1,12 +1,10 @@
-import type { InvestmentPortfolio, Holding } from '~/types/models'
+import type { Holding } from '~/types/models'
 
 export const useInvestments = () => {
-  const { selectedBook } = useMoneyBooks()
   const { success: showSuccess, error: showError } = useNotification()
   const { showDialog } = useConfirmDialog()
 
   // State
-  const portfolio = useState<InvestmentPortfolio | null>('investment-portfolio', () => null)
   const holdings = useState<Holding[]>('investment-holdings', () => [])
   const loading = useState('investment-loading', () => false)
   
@@ -96,13 +94,7 @@ export const useInvestments = () => {
 
     loading.value = true
     try {
-      // Load portfolio
-      const portfolioData = await $fetch<InvestmentPortfolio>(`/api/investment-portfolios?money_book_id=${bookId}`, {
-        signal: currentController.signal
-      })
-      portfolio.value = portfolioData
-
-      // Load holdings
+      // Load holdings (portfolio table exists but not currently used in UI)
       const holdingsData = await $fetch<Holding[]>(`/api/holdings?money_book_id=${bookId}`, {
         signal: currentController.signal
       })
@@ -133,6 +125,7 @@ export const useInvestments = () => {
     notes?: string
     linked_allocation_id?: string
   }) {
+    const { selectedBook } = useMoneyBooks()
     if (!selectedBook.value?.id) {
       showError('No money book selected')
       return
@@ -201,8 +194,6 @@ export const useInvestments = () => {
 
   // Handle delete with confirmation
   async function handleDeleteHolding(holding: Holding) {
-    const assetName = (holding as any).asset_name || 'this holding'
-    
     await showDialog({
       title: 'Delete Investment Holding?',
       message: `Are you sure you want to delete "${holding.instrument_name}" from ${holding.platform}?`,
@@ -218,15 +209,8 @@ export const useInvestments = () => {
     })
   }
 
-  // Watch for selected book changes - all books now support investment tracking
-  watch(() => selectedBook.value?.id, (newBookId) => {
-    if (newBookId) {
-      loadInvestments(newBookId)
-    } else {
-      portfolio.value = null
-      holdings.value = []
-    }
-  }, { immediate: true })
+  // NOTE: Watcher moved to plugins/investments.client.ts to prevent duplication
+  // Each component calling useInvestments() was creating duplicate watchers
 
   // Save simulation result
   function saveSimulationResult(data: {
@@ -248,7 +232,6 @@ export const useInvestments = () => {
 
   return {
     // State
-    portfolio,
     holdings,
     loading,
     simulationResult,
