@@ -42,7 +42,6 @@ import {
   VStepperWindowItem,
   VSwitch,
   VTextField,
-  VTooltip,
 } from 'vuetify/components'
 
 // Import only used directives
@@ -90,7 +89,6 @@ export default defineNuxtPlugin((nuxtApp) => {
       VStepperWindowItem,
       VSwitch,
       VTextField,
-      VTooltip,
     },
     directives: {
       Ripple,

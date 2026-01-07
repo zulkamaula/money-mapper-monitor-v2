@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const { createHolding, updateHolding } = useInvestments()
 const { allocations } = useAllocations()
 const { success: showSuccess, error: showError } = useNotification()
+const { fetchGoldPrice, loading: priceLoading } = usePriceData()
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -38,15 +39,55 @@ const form = ref({
   linked_allocation_id: undefined as string | undefined
 })
 
-// Dynamic instrument options based on selected asset type
-const instrumentOptions = computed(() => {
-  return instrumentOptionsByAssetType[form.value.asset_type] || []
+// Grouped instrument options (all instruments organized by asset type)
+const groupedInstrumentOptions = computed(() => {
+  const items: any[] = []
+  
+  assetTypes.forEach((type, index) => {
+    const instruments = instrumentOptionsByAssetType[type.value] || []
+    if (instruments.length > 0) {
+      // Add divider before each group (except first)
+      if (index > 0) {
+        items.push({ type: 'divider' })
+      }
+      
+      // Add subheader with icon
+      items.push({
+        type: 'subheader',
+        title: type.title, // "Emas", "Saham", etc.
+        icon: type.icon,
+        assetType: type.value
+      })
+      
+      // Add instrument items
+      instruments.forEach(instrument => {
+        items.push({
+          title: instrument,
+          value: instrument,
+          group: type.title,
+          assetType: type.value,
+          icon: type.icon
+        })
+      })
+    }
+  })
+  
+  return items
 })
 
-// Clear instrument name when asset type changes
-watch(() => form.value.asset_type, () => {
-  if (!isEditMode.value) {
-    form.value.instrument_name = null
+// Auto-derive asset type and asset name from selected instrument
+watch(() => form.value.instrument_name, (newInstrument) => {
+  if (newInstrument && !isEditMode.value) {
+    // Find the selected instrument in grouped options (skip subheaders and dividers)
+    const selected = groupedInstrumentOptions.value.find(
+      item => item.type !== 'subheader' && item.type !== 'divider' && item.value === newInstrument
+    )
+    
+    if (selected) {
+      // Auto-set asset type and asset name
+      form.value.asset_type = selected.assetType
+      form.value.asset_name = selected.group
+    }
   }
 })
 
@@ -133,6 +174,25 @@ function nextStep() {
 function prevStep() {
   if (currentStep.value > 1) {
     currentStep.value--
+  }
+}
+
+async function handleFetchPrice() {
+  if (!form.value.asset_type) {
+    showError('Please select an instrument first')
+    return
+  }
+
+  // Currently only gold is supported via Yahoo Finance
+  if (form.value.asset_type === 'gold') {
+    const price = await fetchGoldPrice()
+    if (price) {
+      form.value.average_price = price
+      averagePriceDisplay.value = formatNumberInput(price)
+      showSuccess(`Gold price fetched: ${formatCurrency(price)}/gram`)
+    }
+  } else {
+    showError('Price fetching is currently only available for gold. Please enter price manually.')
   }
 }
 
@@ -307,34 +367,36 @@ watch(() => props.modelValue, (newVal) => {
             <!-- Step 1: Asset Information -->
             <VStepperWindowItem :value="1">
               <VRow>
-                <!-- Asset Type (disabled in edit mode) -->
+                <!-- Instrument (grouped by asset type) -->
                 <VCol cols="12" md="6">
-                  <VSelect
-                    v-model="form.asset_type"
-                    label="Asset Type"
-                    :items="assetTypes"
-                    item-value="value"
+                  <VAutocomplete
+                    v-model="form.instrument_name"
+                    label="Instrument"
+                    :items="groupedInstrumentOptions"
                     item-title="title"
+                    item-value="value"
+                    placeholder="Search or select instrument"
+                    hint="Grouped by asset type - type to search"
+                    persistent-hint
                     variant="outlined"
                     :disabled="isEditMode || submitting"
+                    clearable
                   >
-                    <template v-slot:selection="{ item }">
-                      <div class="d-flex align-center">
-                        <VIcon :icon="item.raw.icon" size="20" class="mr-2" />
-                        {{ item.raw.title }}
-                      </div>
+                    <template v-slot:prepend-inner>
+                      <VIcon icon="mdi-certificate" size="20" />
                     </template>
+                    
                     <template v-slot:item="{ props, item }">
-                      <VListItem v-bind="props">
+                      <VListItem v-bind="props" :title="item.raw.title">
                         <template v-slot:prepend>
-                          <VIcon :icon="item.raw.icon" size="20" />
+                          <VIcon :icon="item.raw.icon" />
                         </template>
                       </VListItem>
                     </template>
-                  </VSelect>
+                  </VAutocomplete>
                 </VCol>
 
-                <!-- Platform (disabled in edit mode) -->
+                <!-- Platform -->
                 <VCol cols="12" md="6">
                   <VCombobox
                     v-model="form.platform"
@@ -347,25 +409,6 @@ watch(() => props.modelValue, (newVal) => {
                   >
                     <template v-slot:prepend-inner>
                       <VIcon icon="mdi-store" size="20" />
-                    </template>
-                  </VCombobox>
-                </VCol>
-
-                <!-- Instrument Name (disabled in edit mode) -->
-                <VCol cols="12" md="6">
-                  <VCombobox
-                    v-model="form.instrument_name"
-                    label="Instrument Name"
-                    :items="instrumentOptions"
-                    placeholder="Select or type instrument name"
-                    hint="Select from recommendations or type your own"
-                    persistent-hint
-                    variant="outlined"
-                    :disabled="isEditMode || submitting"
-                    clearable
-                  >
-                    <template v-slot:prepend-inner>
-                      <VIcon icon="mdi-certificate" size="20" />
                     </template>
                   </VCombobox>
                 </VCol>
@@ -455,10 +498,12 @@ watch(() => props.modelValue, (newVal) => {
                     size="large"
                     variant="tonal"
                     color="primary"
-                    :disabled="submitting"
+                    :disabled="submitting || !form.asset_type || priceLoading"
+                    :loading="priceLoading"
                     prepend-icon="mdi-sync-circle"
                     class="mt-0 text-none h-100"
                     block
+                    @click="handleFetchPrice"
                   >
                     Get Sync Price
                   </VBtn>
@@ -615,6 +660,10 @@ watch(() => props.modelValue, (newVal) => {
 </template>
 
 <style scoped>
+:deep(.v-stepper-header button) {
+  padding: 1rem;
+}
+
 .stepper-header-scroll {
   overflow-x: auto;
   scroll-behavior: smooth;
