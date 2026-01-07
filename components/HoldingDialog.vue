@@ -99,8 +99,10 @@ watch([() => form.value.initial_investment, () => form.value.average_price], ([i
   }
 })
 
-// Note: Current Value removed from form - it's same as Initial Investment at purchase time
-// Current Value should be updated later when viewing holdings, not at creation
+// Auto-set Current Value = Initial Investment (same at purchase time)
+watch(() => form.value.initial_investment, (initial) => {
+  form.value.current_value = initial
+})
 
 const initialDisplay = ref('')
 const averagePriceDisplay = ref('')
