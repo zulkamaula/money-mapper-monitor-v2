@@ -17,6 +17,9 @@ export const useInvestments = () => {
     timestamp: number
   } | null>('simulation-result', () => null)
 
+  // Per-book cache for high performance
+  const cache = useState<Map<string, Holding[]>>('holdings-cache', () => new Map())
+
   // AbortController for cancellable requests
   let abortController: AbortController | null = null
 
@@ -84,6 +87,13 @@ export const useInvestments = () => {
 
   // Load portfolio and holdings
   async function loadInvestments(bookId: string) {
+    // Check cache first - avoid API call if data exists
+    const cached = cache.value.get(bookId)
+    if (cached) {
+      holdings.value = cached
+      return // ✅ High performance: no API call
+    }
+
     // Cancel previous request if exists
     if (abortController) {
       abortController.abort()
@@ -98,7 +108,12 @@ export const useInvestments = () => {
       const holdingsData = await $fetch<Holding[]>(`/api/holdings?money_book_id=${bookId}`, {
         signal: currentController.signal
       })
-      holdings.value = holdingsData
+      
+      // Only update if this controller wasn't aborted
+      if (abortController === currentController) {
+        holdings.value = holdingsData
+        cache.value.set(bookId, holdingsData) // ✅ Cache for next switch
+      }
     } catch (error: any) {
       if (error.cause?.name === 'AbortError' || error.name === 'AbortError') {
         return
@@ -108,8 +123,8 @@ export const useInvestments = () => {
     } finally {
       if (abortController === currentController) {
         abortController = null
+        loading.value = false
       }
-      loading.value = false
     }
   }
 
@@ -131,17 +146,22 @@ export const useInvestments = () => {
       return
     }
 
+    const bookId = selectedBook.value.id
+
     try {
       const newHolding = await $fetch<Holding>('/api/holdings', {
         method: 'POST',
         body: {
-          money_book_id: selectedBook.value.id,
+          money_book_id: bookId,
           ...data
         }
       })
 
       // Add asset info for display (from API response)
       holdings.value.unshift(newHolding)
+      
+      // Update cache
+      cache.value.set(bookId, [...holdings.value])
       
       return newHolding
     } catch (error) {
@@ -168,6 +188,12 @@ export const useInvestments = () => {
       if (index !== -1) {
         holdings.value[index] = updated
       }
+      
+      // Update cache
+      const { selectedBook } = useMoneyBooks()
+      if (selectedBook.value?.id) {
+        cache.value.set(selectedBook.value.id, [...holdings.value])
+      }
 
       return updated
     } catch (error) {
@@ -185,6 +211,12 @@ export const useInvestments = () => {
       })
 
       holdings.value = holdings.value.filter(h => h.id !== holdingId)
+      
+      // Update cache
+      const { selectedBook } = useMoneyBooks()
+      if (selectedBook.value?.id) {
+        cache.value.set(selectedBook.value.id, [...holdings.value])
+      }
     } catch (error) {
       console.error('Failed to delete holding:', error)
       showError('Failed to delete holding')

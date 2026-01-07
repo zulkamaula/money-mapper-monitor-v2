@@ -110,11 +110,12 @@ function toggleGroup(assetType: string) {
             <p class="text-caption text-medium-emphasis mb-4">
               Create holdings from your budget allocations in the Allocation Card
             </p>
-            <VAlert color="info" variant="tonal" class="mx-auto" style="max-width: 500px;">
-              <div class="text-caption">
-                <VIcon icon="mdi-information" size="small" class="mr-1" />
-                Holdings can only be created from allocations (allocation-first workflow)
-              </div>
+            <VAlert type="info" variant="tonal" class="mx-auto" border="start" prominent title="Allocation-first workflow" style="max-width: 500px;">
+              <template #text>
+                <div class="text-caption text-left">
+                  Holdings can only be created from allocations
+                </div>
+              </template>
             </VAlert>
           </div>
 
