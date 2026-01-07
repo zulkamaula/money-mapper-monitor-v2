@@ -472,6 +472,7 @@ watch(() => props.modelValue, (newVal) => {
                     :suffix="form.asset_type === 'gold' ? 'gram' : 'lot'"
                     readonly
                     :disabled="submitting"
+                    base-color="primary"
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">

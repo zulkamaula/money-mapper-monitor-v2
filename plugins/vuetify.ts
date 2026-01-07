@@ -115,6 +115,22 @@ export default defineNuxtPlugin((nuxtApp) => {
           family: 'Poppins, sans-serif',
         },
       },
+      // Set default color for all form components
+      VTextField: {
+        color: 'primary',
+      },
+      VSelect: {
+        color: 'primary',
+      },
+      VAutocomplete: {
+        color: 'primary',
+      },
+      VCombobox: {
+        color: 'primary',
+      },
+      VSwitch: {
+        color: 'primary',
+      },
     },
   })
 
