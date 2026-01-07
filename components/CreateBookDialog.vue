@@ -139,7 +139,7 @@ watch(() => props.modelValue, (newVal) => {
 
       <VDivider />
 
-      <VCardActions class="pa-4 flex-column flex-sm-row">
+      <VCardActions class="pa-4 flex-column-reverse flex-sm-row ga-2">
         <VSpacer />
         <VBtn
           variant="text"

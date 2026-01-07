@@ -261,8 +261,8 @@ watch(() => props.modelValue, (newVal) => {
       <VDivider />
 
       <VCardText class="pa-5 overflow-y-auto" style="max-height: 70vh;">
-        <VStepper v-model="currentStep" flat>
-          <VStepperHeader class="border rounded-pill mx-auto mx-sm-15 mb-15 stepper-header-scroll">
+        <VStepper v-model="currentStep" flat :mobile="$vuetify.display.xs">
+          <VStepperHeader class="border rounded-pill mx-auto mx-sm-15 mb-sm-15 mb-5 pa-0 stepper-header-scroll">
             <VStepperItem
               title="Asset Info"
               :complete="currentStep > 1"
@@ -375,7 +375,7 @@ watch(() => props.modelValue, (newVal) => {
             <!-- Step 2: Financial Values -->
             <VStepperWindowItem :value="2">
               <VRow>
-                <!-- Initial Investment (always editable) -->
+                <!-- Row 1: Initial Investment | Purchase Date -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="initialDisplay"
@@ -406,39 +406,6 @@ watch(() => props.modelValue, (newVal) => {
                   </VTextField>
                 </VCol>
 
-                <!-- Current Value (auto-calculated, readonly) -->
-                <VCol cols="12" md="6">
-                  <VTextField
-                    v-model="currentDisplay"
-                    label="Current Value"
-                    placeholder="Auto-calculated"
-                    variant="outlined"
-                    prefix="Rp"
-                    inputmode="numeric"
-                    readonly
-                    bg-color="grey-lighten-4"
-                  >
-                    <template v-slot:append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
-                        </template>
-                        <VCard class="pa-3" style="max-width: 300px;">
-                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
-                          <div class="text-caption">
-                            <strong>Formula:</strong><br>
-                            Current Value = Quantity × Average Price<br><br>
-                            <strong>Example:</strong><br>
-                            • 0.5 gram × Rp 1.200.000 = Rp 600.000<br>
-                            • 100 shares × Rp 10.500 = Rp 1.050.000
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-
-                <!-- Purchase Date -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="form.purchase_date"
@@ -449,7 +416,55 @@ watch(() => props.modelValue, (newVal) => {
                   />
                 </VCol>
 
-                <!-- Quantity (auto-calculated, readonly) -->
+                <!-- Row 2: Average Price | Sync Button -->
+                <VCol cols="12" md="6" class="mb-5">
+                  <VTextField
+                    v-model="averagePriceDisplay"
+                    label="Average Price"
+                    placeholder="0"
+                    variant="outlined"
+                    prefix="Rp"
+                    inputmode="numeric"
+                    :disabled="submitting"
+                    @input="handleAveragePriceInput"
+                    hide-details
+                  >
+                    <template v-slot:append-inner>
+                      <VMenu location="top" :close-on-content-click="false">
+                        <template v-slot:activator="{ props }">
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
+                        </template>
+                        <VCard class="pa-3" style="max-width: 280px;">
+                          <div class="text-caption font-weight-bold mb-1">Price per unit at time of purchase</div>
+                          <div class="text-caption">
+                            <strong>Manual or Fetch:</strong><br>
+                            Click sync button to fetch latest price from API<br>
+                            Or enter manually<br><br>
+                            <strong>Examples:</strong><br>
+                            • Emas: Rp 1.000.000/gram<br>
+                            • Saham: Rp 10.000/share
+                          </div>
+                        </VCard>
+                      </VMenu>
+                    </template>
+                  </VTextField>
+                </VCol>
+
+                <VCol cols="12" md="6" class="d-flex align-center mb-5">
+                  <VBtn
+                    size="large"
+                    variant="tonal"
+                    color="primary"
+                    :disabled="submitting"
+                    prepend-icon="mdi-sync-circle"
+                    class="mt-0 text-none h-100"
+                    block
+                  >
+                    Get Sync Price
+                  </VBtn>
+                </VCol>
+
+                <!-- Row 3: Quantity | Current Value -->
                 <VCol cols="12" md="6">
                   <VTextField
                     :model-value="form.quantity || 0"
@@ -481,44 +496,30 @@ watch(() => props.modelValue, (newVal) => {
                   </VTextField>
                 </VCol>
 
-                <!-- Average Price with Fetch Button -->
                 <VCol cols="12" md="6">
                   <VTextField
-                    v-model="averagePriceDisplay"
-                    label="Average Price"
-                    placeholder="0"
+                    v-model="currentDisplay"
+                    label="Current Value"
+                    placeholder="Auto-calculated"
                     variant="outlined"
                     prefix="Rp"
                     inputmode="numeric"
-                    :disabled="submitting"
-                    @input="handleAveragePriceInput"
+                    readonly
+                    bg-color="grey-lighten-4"
                   >
-                    <template v-slot:append>
-                      <VBtn
-                        icon="mdi-refresh"
-                        size="small"
-                        variant="text"
-                        color="primary"
-                        title="Fetch Latest Price"
-                        :disabled="submitting"
-                      >
-                        <VIcon>mdi-refresh</VIcon>
-                      </VBtn>
-                    </template>
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
                           <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <VCard class="pa-3" style="max-width: 280px;">
-                          <div class="text-caption font-weight-bold mb-1">Price per unit at time of purchase</div>
+                        <VCard class="pa-3" style="max-width: 300px;">
+                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
                           <div class="text-caption">
-                            <strong>Manual or Fetch:</strong><br>
-                            Click 🔄 button to fetch latest price from API<br>
-                            Or enter manually<br><br>
-                            <strong>Examples:</strong><br>
-                            • Emas: Rp 1.000.000/gram<br>
-                            • Saham: Rp 10.000/share
+                            <strong>Formula:</strong><br>
+                            Current Value = Quantity × Average Price<br><br>
+                            <strong>Example:</strong><br>
+                            • 0.5 gram × Rp 1.200.000 = Rp 600.000<br>
+                            • 100 shares × Rp 10.500 = Rp 1.050.000
                           </div>
                         </VCard>
                       </VMenu>
@@ -566,7 +567,7 @@ watch(() => props.modelValue, (newVal) => {
 
       <VDivider />
 
-      <VCardActions class="pa-4 flex-column flex-sm-row gap-2">
+      <VCardActions class="pa-4 flex-column-reverse flex-sm-row ga-2">
         <VBtn
           variant="text"
           color="grey"

@@ -93,7 +93,7 @@ function resetForm() {
 
       <VDivider />
 
-      <VCardActions class="pa-4 flex-column flex-sm-row">
+      <VCardActions class="pa-4 flex-column-reverse flex-sm-row ga-2">
         <VSpacer />
         <VBtn color="grey" variant="text" class="text-none" @click="internalValue = false">Cancel</VBtn>
         <VBtn color="primary" variant="flat" class="text-none px-5" @click="handleSave"

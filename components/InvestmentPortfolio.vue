@@ -213,15 +213,9 @@ function getProfitColor(holding: Holding) {
                           </div>
 
                           <!-- Additional Info -->
-                          <div v-if="holding.quantity || holding.linked_allocation_id" class="mb-3">
-                            <div v-if="holding.quantity" class="text-caption text-medium-emphasis">
-                              <VIcon icon="mdi-weight" size="x-small" class="mr-1" />
-                              {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
-                            </div>
-                            <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis">
-                              <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
-                              Linked to Budget
-                            </div>
+                          <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis mb-3">
+                            <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
+                            Linked to Budget
                           </div>
 
                           <!-- Profit/Loss -->
@@ -237,9 +231,10 @@ function getProfitColor(holding: Holding) {
 
                           <!-- Optional Info -->
                           <div v-if="holding.quantity || holding.notes" class="mt-3 pt-3 border-t border-opacity-10">
-                            <p v-if="holding.quantity" class="text-caption text-medium-emphasis">
-                              Qty: {{ holding.quantity }}
-                            </p>
+                            <div v-if="holding.quantity" class="text-caption text-medium-emphasis">
+                              <VIcon :icon="getAssetIcon(holding.asset_type as string)" size="x-small" class="mr-1" />
+                              {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
+                            </div>
                             <p v-if="holding.notes" class="text-caption text-medium-emphasis mt-1">
                               {{ holding.notes }}
                             </p>
