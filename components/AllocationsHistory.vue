@@ -68,7 +68,11 @@ function handleCreate() {
 }
 
 function handleAddInvestHolding(allocation: Allocation) {
-  selectedAllocationForHolding.value = allocation
+  // Pass allocation with remaining amount pre-filled
+  selectedAllocationForHolding.value = {
+    ...allocation,
+    source_amount: getRemainingAmount(allocation) // Use remaining, not total
+  }
   showHoldingDialog.value = true
 }
 
@@ -90,7 +94,10 @@ function getHoldingsForAllocation(allocationId: string) {
 // Calculate remaining amount from allocation
 function getRemainingAmount(allocation: Allocation) {
   const linkedHoldings = getHoldingsForAllocation(allocation.id)
-  const totalAllocated = linkedHoldings.reduce((sum, h) => sum + h.initial_investment, 0)
+  const totalAllocated = linkedHoldings.reduce((sum, h) => {
+    const investment = Number(h.initial_investment) || 0
+    return sum + investment
+  }, 0)
   return allocation.source_amount - totalAllocated
 }
 
@@ -204,14 +211,16 @@ async function handleDelete(id: string) {
 
                   <!-- Investment Holdings Section -->
                   <div class="mt-3 pa-3 bg-white rounded">
-                    <div class="d-flex align-center justify-space-between mb-2">
+                    <div class="d-flex ga-2 flex-wrap flex-column flex-sm-row align-center justify-space-between mb-2">
                       <div class="text-caption font-weight-semibold text-primary d-flex align-center ga-2">
                         <VIcon icon="mdi-chart-line" size="small" />
-                        Investment Holdings
-                        <VChip v-if="getHoldingsForAllocation(allocation.id).length > 0" 
-                          size="x-small" color="primary" variant="tonal">
-                          {{ getHoldingsForAllocation(allocation.id).length }}
-                        </VChip>
+                        <span>
+                          Invest Holdings
+                          <VChip v-if="getHoldingsForAllocation(allocation.id).length > 0" 
+                            size="x-small" color="primary" variant="tonal">
+                            {{ getHoldingsForAllocation(allocation.id).length }}
+                          </VChip>
+                        </span>
                       </div>
                       <div class="text-caption text-medium-emphasis">
                         Remaining: {{ formatCurrency(getRemainingAmount(allocation)) }}
@@ -220,11 +229,12 @@ async function handleDelete(id: string) {
                     <VBtn 
                       :disabled="isFullyAllocated(allocation)"
                       color="primary" 
-                      variant="tonal" 
+                      variant="flat" 
                       size="small" 
                       prepend-icon="mdi-plus" 
                       class="text-none" 
                       block
+                      rounded="pill"
                       @click.stop="handleAddInvestHolding(allocation)">
                       <span v-if="isFullyAllocated(allocation)">Full Allocated</span>
                       <span v-else>Add Invest Holding</span>

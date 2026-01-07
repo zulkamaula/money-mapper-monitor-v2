@@ -8,11 +8,6 @@ const showHoldingDialog = ref(false)
 const editingHolding = ref<Holding | undefined>(undefined)
 const isExpanded = ref(false)
 
-function openCreateDialog() {
-  editingHolding.value = undefined
-  showHoldingDialog.value = true
-}
-
 function openEditDialog(holding: Holding) {
   editingHolding.value = holding
   showHoldingDialog.value = true
@@ -22,17 +17,14 @@ function toggleExpand() {
   isExpanded.value = !isExpanded.value
 }
 
-// Initialize all groups as expanded on mount
-onMounted(() => {
-  Object.keys(holdingsByAsset.value).forEach(key => {
-    expandedGroups.value[key] = true
-  })
-})
-
-// Watch for new asset types and expand them by default
-watch(() => holdingsByAsset.value, (newVal) => {
-  Object.keys(newVal).forEach(key => {
-    if (expandedGroups.value[key] === undefined) {
+// Watch for new asset types and expand only newly added ones
+watch(() => holdingsByAsset.value, (newVal, oldVal) => {
+  const newKeys = Object.keys(newVal)
+  const oldKeys = oldVal ? Object.keys(oldVal) : []
+  
+  // Only expand newly added asset types
+  newKeys.forEach(key => {
+    if (!oldKeys.includes(key) && expandedGroups.value[key] === undefined) {
       expandedGroups.value[key] = true
     }
   })
@@ -76,14 +68,14 @@ function toggleGroup(assetType: string) {
             <!-- Mobile: Total invested -->
             <div class="subtitle-stats d-md-none mt-1">
               <VChip v-if="!loading" color="primary" variant="tonal" size="x-small">
-                {{ formatCurrency(holdings.reduce((sum, h) => sum + h.initial_investment, 0)) }}
+                {{ formatCurrency(holdings.reduce((sum, h) => sum + (Number(h.initial_investment) || 0), 0)) }}
               </VChip>
             </div>
           </div>
           <!-- Desktop: Total invested -->
           <div class="subtitle-stats-desktop d-none d-md-flex">
             <VChip v-if="!loading" color="primary" variant="tonal" size="small">
-              {{ formatCurrency(holdings.reduce((sum, h) => sum + h.initial_investment, 0)) }}
+              {{ formatCurrency(holdings.reduce((sum, h) => sum + (Number(h.initial_investment) || 0), 0)) }}
             </VChip>
           </div>
           <!-- Mobile: Toggle button -->
@@ -97,6 +89,14 @@ function toggleGroup(assetType: string) {
       <!-- Shared Content: Desktop always visible, Mobile collapsible -->
       <Transition name="expand">
         <VCardText v-show="isExpanded" class="pa-6 holdings-content">
+
+          <!-- Note: Profit/Loss will be shown in Simulate dialog (Phase 3) -->
+          <VAlert v-if="!loading && holdings.length > 0" color="info" size="small" variant="tonal" class="mb-3">
+            <div class="text-caption">
+              <VIcon icon="mdi-calculator" size="small" class="mr-1" />
+              Use Simulate to calculate profit/loss
+            </div>
+          </VAlert>
 
           <!-- Loading State -->
           <div v-if="loading" class="py-4">
@@ -167,9 +167,6 @@ function toggleGroup(assetType: string) {
                           <!-- Instrument Name -->
                           <div class="d-flex justify-space-between align-center mb-2">
                             <div class="text-body-2 font-weight-semibold text-primary">{{ holding.instrument_name }}</div>
-                            <VChip size="x-small" color="primary" variant="tonal">
-                              {{ holding.asset_type === 'gold' ? '🪙' : '📈' }}
-                            </VChip>
                           </div>
 
                           <!-- Values -->
@@ -178,14 +175,6 @@ function toggleGroup(assetType: string) {
                           <div class="text-body-2 font-weight-medium mb-3">
                             {{ formatCurrency(holding.initial_investment) }}
                           </div>
-
-                          <!-- Note: Profit/Loss will be shown in Simulate dialog (Phase 3) -->
-                          <VAlert color="info" size="small" variant="tonal">
-                            <div class="text-caption">
-                              <VIcon icon="mdi-calculator" size="small" class="mr-1" />
-                              Use Simulate to calculate profit/loss
-                            </div>
-                          </VAlert>
 
                           <!-- Optional Info -->
                           <div v-if="holding.quantity || holding.notes || holding.linked_allocation_id" class="mt-3 pt-3 border-t border-opacity-10">

@@ -26,8 +26,8 @@ export const useInvestments = () => {
   const totalInvested = computed(() => {
     if (!holdings.value || holdings.value.length === 0) return 0
     return holdings.value.reduce((sum, h) => {
-      const value = h.initial_investment
-      return sum + (isNaN(value) || value == null ? 0 : value)
+      const value = Number(h.initial_investment) || 0
+      return sum + value
     }, 0)
   })
 
@@ -76,7 +76,9 @@ export const useInvestments = () => {
           value: 0 
         }
       }
-      allocation[type].value += holding.initial_investment
+      // Ensure initial_investment is a number to avoid NaN
+      const investment = Number(holding.initial_investment) || 0
+      allocation[type].value += investment
     })
     
     return allocation

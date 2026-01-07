@@ -272,6 +272,9 @@ watch(() => props.modelValue, (newVal) => {
       // Create mode - reset form to defaults
       resetForm()
     }
+  } else {
+    // Dialog is closing - reset form to clean state
+    resetForm()
   }
 })
 </script>
@@ -479,7 +482,7 @@ watch(() => props.modelValue, (newVal) => {
                     bg-color="grey-lighten-4"
                     :suffix="form.asset_type === 'gold' ? 'gram' : 'units'"
                   >
-                    <template v-slot:append-inner>
+                    <template v-slot:prepend-inner>
                       <VIcon icon="mdi-calculator" size="small" class="text-medium-emphasis" />
                     </template>
                   </VTextField>
