@@ -57,12 +57,15 @@ export interface Asset {
 export interface Holding {
   id: string
   asset_id: string
+  asset_type?: string
+  asset_name?: string
   platform: string
   instrument_name: string
   initial_investment: number
   current_value: number
   quantity?: number
   average_price?: number
+  purchase_date?: string
   notes?: string
   linked_allocation_id?: string
   last_updated: string

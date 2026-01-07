@@ -175,7 +175,7 @@ function onDragEnd() {
       <Transition name="slide-down">
         <VCard class="selector-card" elevation="0">
           <VCardText class="pa-5">
-            <VRow align="center" class="ga-3">
+            <VRow align="center" class="ga-1">
               <!-- Books List with horizontal scroll -->
               <VCol cols="12" md="auto" class="flex-grow-1">
                 <div class="books-scroll-container">
@@ -224,7 +224,6 @@ function onDragEnd() {
                 <VBtn
                   color="primary"
                   variant="tonal"
-                  size="large"
                   @click="openCreateDialog"
                   :loading="creating"
                   class="text-none"
@@ -314,7 +313,6 @@ function onDragEnd() {
 .books-scroll-container {
   width: 100%;
   overflow-x: auto;
-  padding: 4px 0 8px 0;
   position: relative;
   border-radius: 10px;
 

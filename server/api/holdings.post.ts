@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
     current_value: number
     quantity?: number
     average_price?: number
+    purchase_date?: string
     notes?: string
     linked_allocation_id?: string
   }>(event)
@@ -27,6 +28,7 @@ export default defineEventHandler(async (event) => {
     current_value,
     quantity,
     average_price,
+    purchase_date,
     notes,
     linked_allocation_id
   } = body
@@ -106,22 +108,22 @@ export default defineEventHandler(async (event) => {
     INSERT INTO public.holdings (
       id, asset_id, platform, instrument_name, 
       initial_investment, current_value, quantity, average_price, 
-      notes, linked_allocation_id
+      purchase_date, notes, linked_allocation_id
     )
     VALUES (
       uuid_generate_v4()::TEXT, ${assetId}, ${platform}, ${instrument_name},
       ${initial_investment}, ${current_value}, ${quantity || null}, ${average_price || null},
-      ${notes || null}, ${linked_allocation_id || null}
+      ${purchase_date || null}, ${notes || null}, ${linked_allocation_id || null}
     )
     RETURNING id, asset_id, platform, instrument_name, 
               initial_investment, current_value, quantity, average_price,
-              notes, linked_allocation_id, last_updated, created_at
+              purchase_date, notes, linked_allocation_id, last_updated, created_at
   `
   
   // Return holding with asset info for proper frontend grouping
   return {
     ...holding[0],
-    asset_type: asset_type,
-    asset_name: asset_name
+    asset_type,
+    asset_name
   }
 })

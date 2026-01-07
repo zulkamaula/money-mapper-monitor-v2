@@ -18,10 +18,6 @@ function openEditDialog(holding: Holding) {
   showHoldingDialog.value = true
 }
 
-function handleDialogSave() {
-  // Dialog will close automatically, just refresh if needed
-}
-
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
 }
@@ -216,6 +212,18 @@ function getProfitColor(holding: Holding) {
                             </div>
                           </div>
 
+                          <!-- Additional Info -->
+                          <div v-if="holding.quantity || holding.linked_allocation_id" class="mb-3">
+                            <div v-if="holding.quantity" class="text-caption text-medium-emphasis">
+                              <VIcon icon="mdi-weight" size="x-small" class="mr-1" />
+                              {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
+                            </div>
+                            <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis">
+                              <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
+                              Linked to Budget
+                            </div>
+                          </div>
+
                           <!-- Profit/Loss -->
                           <VAlert :color="getProfitColor(holding)" size="small" variant="tonal">
                             <div class="d-flex justify-space-between flex-wrap align-center">
@@ -249,7 +257,7 @@ function getProfitColor(holding: Holding) {
     </VCard>
 
     <!-- Holding Dialog -->
-    <HoldingDialog v-model="showHoldingDialog" :holding="editingHolding" @save="handleDialogSave" />
+    <HoldingDialog v-model="showHoldingDialog" :holding="editingHolding" />
   </div>
 </template>
 

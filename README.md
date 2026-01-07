@@ -8,6 +8,8 @@ A modern, full-stack money management application built with Nuxt 4, Vue 3, and 
 - 📚 **Multiple Money Books** - Organize finances by categories
 - 💼 **Pocket Management** - Allocate money to different pockets with percentage-based distribution
 - 📊 **Allocation History** - Track all your income allocations with detailed breakdowns
+- 📈 **Investment Tracking** - Track holdings across multiple platforms (gold, stocks, ETF, crypto, etc.)
+- 🔄 **Auto-Calculation** - Smart quantity and current value calculation
 - 📱 **Responsive Design** - Optimized for mobile, tablet, and desktop
 - 🎨 **Modern UI** - Clean, fresh design with Vuetify Material Design components
 - ⚡ **Real-time Updates** - Instant UI updates with Vue 3 Composition API
@@ -66,7 +68,14 @@ NEON_DATABASE_URL=postgresql://user:password@host/database
 
 4. Run database migrations
 ```bash
-# See server/db/schema.sql for database setup
+# Core schema
+psql $NEON_DATABASE_URL -f server/db/schema.sql
+
+# Investment tracking schema
+psql $NEON_DATABASE_URL -f server/db/investment-schema.sql
+
+# If upgrading existing database, run migrations:
+psql $NEON_DATABASE_URL -f server/db/migrations/add_purchase_date_to_holdings.sql
 ```
 
 5. Start development server
@@ -89,10 +98,13 @@ m3-nuxt/
 │   ├── AllocationsHistory.vue
 │   ├── AppFooter.vue
 │   ├── AppNavbar.vue
+│   ├── HoldingDialog.vue
+│   ├── InvestmentPortfolio.vue
 │   ├── LegalDocument.vue
 │   ├── LoginForm.vue
 │   ├── MoneyBookSelector.vue
-│   └── PocketsManager.vue
+│   ├── PocketsManager.vue
+│   └── PortfolioSummaryCard.vue
 ├── layouts/              # Layout components
 │   ├── blank.vue        # Minimal layout (login)
 │   └── default.vue      # Main layout with navbar/footer
@@ -112,6 +124,10 @@ m3-nuxt/
 │   │   ├── allocations.get.ts
 │   │   ├── allocations.post.ts
 │   │   ├── allocations/[id].delete.ts
+│   │   ├── holdings.get.ts
+│   │   ├── holdings.post.ts
+│   │   ├── holdings/[id].delete.ts
+│   │   ├── holdings/[id].patch.ts
 │   │   ├── money-books.get.ts
 │   │   ├── money-books.post.ts
 │   │   ├── pockets.get.ts
@@ -120,7 +136,8 @@ m3-nuxt/
 │   │   └── pockets/[id].patch.ts
 │   ├── db/             # Database utilities
 │   │   ├── schema.sql
-│   │   └── migration scripts
+│   │   ├── investment-schema.sql
+│   │   └── migrations/
 │   ├── middleware/
 │   │   └── auth.ts    # Server-side auth
 │   ├── types/
@@ -202,6 +219,15 @@ NEON_DATABASE_URL
 - View allocation history with expandable details
 - Copy amounts to clipboard
 - Add notes to allocations
+
+### Investment Portfolio Tracking
+- Track investments across multiple platforms (Pluang, Stockbit, IPOT, etc.)
+- Support for various asset types: Gold, Stocks, ETF, Mutual Funds, Bonds, Crypto
+- Auto-calculate quantity from investment amount and price
+- Auto-calculate current value from quantity and current price
+- Link investments to budget allocations for money flow tracking
+- Purchase date tracking for historical analysis
+- Real-time profit/loss calculation with percentage display
 
 ### Responsive Design
 - Mobile-first approach

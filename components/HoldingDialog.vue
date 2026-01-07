@@ -33,6 +33,7 @@ const form = ref({
   current_value: 0,
   quantity: undefined as number | undefined,
   average_price: undefined as number | undefined,
+  purchase_date: new Date().toISOString().split('T')[0],
   notes: '',
   linked_allocation_id: undefined as string | undefined
 })
@@ -46,6 +47,24 @@ const instrumentOptions = computed(() => {
 watch(() => form.value.asset_type, () => {
   if (!isEditMode.value) {
     form.value.instrument_name = null
+  }
+})
+
+// Auto-calculate Quantity when Initial Investment or Average Price changes
+watch([() => form.value.initial_investment, () => form.value.average_price], ([initial, avgPrice]) => {
+  if (initial > 0 && avgPrice && avgPrice > 0) {
+    form.value.quantity = initial / avgPrice
+  } else {
+    form.value.quantity = undefined
+  }
+})
+
+// Auto-calculate Current Value when Quantity or Average Price changes
+watch([() => form.value.quantity, () => form.value.average_price], ([qty, avgPrice]) => {
+  if (qty && qty > 0 && avgPrice && avgPrice > 0) {
+    const calculatedValue = qty * avgPrice
+    form.value.current_value = calculatedValue
+    currentDisplay.value = formatNumberInput(calculatedValue)
   }
 })
 
@@ -94,6 +113,7 @@ function resetForm() {
     current_value: 0,
     quantity: undefined,
     average_price: undefined,
+    purchase_date: new Date().toISOString().split('T')[0],
     notes: '',
     linked_allocation_id: undefined
   }
@@ -200,21 +220,28 @@ watch(() => props.modelValue, (newVal) => {
     // Dialog is opening
     if (props.holding) {
       // Edit mode - populate form with holding data
+      // Parse all number values explicitly to prevent string concatenation
+      const initialInvestment = Number(props.holding.initial_investment) || 0
+      const currentValueNum = Number(props.holding.current_value) || 0
+      const quantityNum = props.holding.quantity ? Number(props.holding.quantity) : undefined
+      const avgPrice = props.holding.average_price ? Number(props.holding.average_price) : undefined
+      
       form.value = {
         asset_type: (props.holding as any).asset_type || 'gold',
         asset_name: (props.holding as any).asset_name || '',
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
-        initial_investment: props.holding.initial_investment,
-        current_value: props.holding.current_value,
-        quantity: props.holding.quantity,
-        average_price: props.holding.average_price,
+        initial_investment: initialInvestment,
+        current_value: currentValueNum,
+        quantity: quantityNum,
+        average_price: avgPrice,
+        purchase_date: props.holding.purchase_date || new Date().toISOString().split('T')[0],
         notes: props.holding.notes || '',
         linked_allocation_id: props.holding.linked_allocation_id || undefined
       }
-      initialDisplay.value = formatNumberInput(props.holding.initial_investment)
-      currentDisplay.value = formatNumberInput(props.holding.current_value)
-      averagePriceDisplay.value = props.holding.average_price ? formatNumberInput(props.holding.average_price) : ''
+      initialDisplay.value = formatNumberInput(initialInvestment)
+      currentDisplay.value = formatNumberInput(currentValueNum)
+      averagePriceDisplay.value = avgPrice ? formatNumberInput(avgPrice) : ''
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -348,7 +375,7 @@ watch(() => props.modelValue, (newVal) => {
             <!-- Step 2: Financial Values -->
             <VStepperWindowItem :value="2">
               <VRow>
-                <!-- Initial Investment (disabled in edit mode) -->
+                <!-- Initial Investment (always editable) -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="initialDisplay"
@@ -357,15 +384,15 @@ watch(() => props.modelValue, (newVal) => {
                     variant="outlined"
                     prefix="Rp"
                     inputmode="numeric"
-                    :disabled="isEditMode || submitting"
+                    :disabled="submitting"
                     @input="handleInitialInput"
                   >
                     <template v-slot:append-inner>
-                      <VTooltip location="top">
+                      <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <div class="pa-2" style="max-width: 300px;">
+                        <VCard class="pa-3" style="max-width: 300px;">
                           <div class="text-caption font-weight-bold mb-1">Total amount you invested initially</div>
                           <div class="text-caption">
                             <strong>Examples:</strong><br>
@@ -373,79 +400,92 @@ watch(() => props.modelValue, (newVal) => {
                             • Saham: 100 shares × Rp 10.000 = Rp 1.000.000<br>
                             • ETF: 5 units × Rp 500.000 = Rp 2.500.000
                           </div>
-                        </div>
-                      </VTooltip>
+                        </VCard>
+                      </VMenu>
                     </template>
                   </VTextField>
                 </VCol>
 
-                <!-- Current Value (always editable) -->
+                <!-- Current Value (auto-calculated, readonly) -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="currentDisplay"
                     label="Current Value"
-                    placeholder="0"
+                    placeholder="Auto-calculated"
                     variant="outlined"
                     prefix="Rp"
                     inputmode="numeric"
-                    :disabled="submitting"
-                    @input="handleCurrentInput"
+                    readonly
+                    bg-color="grey-lighten-4"
                   >
                     <template v-slot:append-inner>
-                      <VTooltip location="top">
+                      <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <div class="pa-2" style="max-width: 300px;">
-                          <div class="text-caption font-weight-bold mb-1">Today's market value</div>
+                        <VCard class="pa-3" style="max-width: 300px;">
+                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
                           <div class="text-caption">
-                            <strong>Examples:</strong><br>
-                            • Emas: 10 gram × Rp 1.200.000 = Rp 12.000.000<br>
-                            • Saham: 100 shares × Rp 10.500 = Rp 1.050.000<br>
-                            • ETF: 5 units × $520 = Rp 8.320.000 (convert to IDR)
+                            <strong>Formula:</strong><br>
+                            Current Value = Quantity × Average Price<br><br>
+                            <strong>Example:</strong><br>
+                            • 0.5 gram × Rp 1.200.000 = Rp 600.000<br>
+                            • 100 shares × Rp 10.500 = Rp 1.050.000
                           </div>
-                        </div>
-                      </VTooltip>
+                        </VCard>
+                      </VMenu>
                     </template>
                   </VTextField>
                 </VCol>
 
-                <!-- Quantity (optional) -->
+                <!-- Purchase Date -->
                 <VCol cols="12" md="6">
                   <VTextField
-                    v-model.number="form.quantity"
-                    :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity (Optional)'"
-                    placeholder="0"
+                    v-model="form.purchase_date"
+                    label="Purchase Date"
+                    type="date"
+                    variant="outlined"
+                    :disabled="submitting"
+                  />
+                </VCol>
+
+                <!-- Quantity (auto-calculated, readonly) -->
+                <VCol cols="12" md="6">
+                  <VTextField
+                    :model-value="form.quantity || 0"
+                    :label="form.asset_type === 'gold' ? 'Quantity (gram)' : 'Quantity'"
+                    placeholder="Auto-calculated"
                     variant="outlined"
                     inputmode="numeric"
                     :suffix="form.asset_type === 'gold' ? 'gram' : ''"
-                    :disabled="submitting"
+                    readonly
+                    bg-color="grey-lighten-4"
                   >
                     <template v-slot:append-inner>
-                      <VTooltip location="top">
+                      <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <div class="pa-2" style="max-width: 280px;">
-                          <div class="text-caption font-weight-bold mb-1">Number of units you own</div>
+                        <VCard class="pa-3" style="max-width: 280px;">
+                          <div class="text-caption font-weight-bold mb-1">Auto-calculated from formula</div>
                           <div class="text-caption">
-                            <strong>Examples:</strong><br>
-                            • Emas: 10 (grams)<br>
-                            • Saham: 100 (shares/lot)<br>
-                            • ETF: 5 (units)<br>
-                            • Crypto: 0.5 (BTC)
+                            <strong>Formula:</strong><br>
+                            Quantity = Initial Investment ÷ Average Price<br><br>
+                            <strong>Example:</strong><br>
+                            • Rp 500.000 ÷ Rp 1.000.000 = 0.5 gram<br>
+                            • Rp 1.000.000 ÷ Rp 10.000 = 100 shares
                           </div>
-                        </div>
-                      </VTooltip>
+                        </VCard>
+                      </VMenu>
                     </template>
                   </VTextField>
                 </VCol>
 
-                <!-- Average Price (optional) -->
+                <!-- Average Price with Fetch Button -->
                 <VCol cols="12" md="6">
                   <VTextField
                     v-model="averagePriceDisplay"
-                    label="Average Price (Optional)"
+                    label="Average Price"
                     placeholder="0"
                     variant="outlined"
                     prefix="Rp"
@@ -453,22 +493,35 @@ watch(() => props.modelValue, (newVal) => {
                     :disabled="submitting"
                     @input="handleAveragePriceInput"
                   >
+                    <template v-slot:append>
+                      <VBtn
+                        icon="mdi-refresh"
+                        size="small"
+                        variant="text"
+                        color="primary"
+                        title="Fetch Latest Price"
+                        :disabled="submitting"
+                      >
+                        <VIcon>mdi-refresh</VIcon>
+                      </VBtn>
+                    </template>
                     <template v-slot:append-inner>
-                      <VTooltip location="top">
+                      <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
-                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis" />
+                          <VIcon v-bind="props" icon="mdi-help-circle-outline" size="small" class="text-medium-emphasis cursor-pointer" />
                         </template>
-                        <div class="pa-2" style="max-width: 280px;">
-                          <div class="text-caption font-weight-bold mb-1">Price per unit</div>
+                        <VCard class="pa-3" style="max-width: 280px;">
+                          <div class="text-caption font-weight-bold mb-1">Price per unit at time of purchase</div>
                           <div class="text-caption">
+                            <strong>Manual or Fetch:</strong><br>
+                            Click 🔄 button to fetch latest price from API<br>
+                            Or enter manually<br><br>
                             <strong>Examples:</strong><br>
                             • Emas: Rp 1.000.000/gram<br>
-                            • Saham: Rp 10.000/share<br>
-                            • ETF: Rp 500.000/unit<br>
-                            • Reksadana: Rp 1.250/unit
+                            • Saham: Rp 10.000/share
                           </div>
-                        </div>
-                      </VTooltip>
+                        </VCard>
+                      </VMenu>
                     </template>
                   </VTextField>
                 </VCol>
@@ -526,10 +579,9 @@ watch(() => props.modelValue, (newVal) => {
         <VSpacer />
         <div class="w-100 w-sm-auto d-flex ga-0 ga-sm-4 justify-space-between">
           <VBtn
-            v-if="currentStep > 1"
             variant="text"
             @click="prevStep"
-            :disabled="submitting"
+            :disabled="submitting || currentStep === 1"
             class="text-none"
           >
             Back

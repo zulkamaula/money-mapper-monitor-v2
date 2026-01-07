@@ -26,6 +26,9 @@ logs
 
 # Database files (sensitive)
 server/db/*.sql
+!server/db/schema.sql
+!server/db/investment-schema.sql
+!server/db/migrations/*.sql
 server/db/*.js
 
 # Internal documentation (keep private)

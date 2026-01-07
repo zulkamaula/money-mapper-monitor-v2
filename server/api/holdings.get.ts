@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
       h.current_value,
       h.quantity,
       h.average_price,
+      h.purchase_date,
       h.notes,
       h.linked_allocation_id,
       h.last_updated,
