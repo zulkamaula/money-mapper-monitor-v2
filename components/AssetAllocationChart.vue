@@ -182,7 +182,7 @@ watch(() => props.data, () => {
   gap: 8px;
   padding: 4px 8px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.02);
+  background: white;
 }
 
 .legend-color {

@@ -31,16 +31,19 @@ interface SimulationData {
 const simulationData = ref<SimulationData[]>([])
 
 function initializeSimulation() {
-  simulationData.value = holdings.value.map(holding => ({
-    holding,
-    purchasePrice: 0,
-    purchasePriceDisplay: '',
-    currentPrice: 0,
-    currentPriceDisplay: '',
-    calculatedCurrentValue: 0,
-    profit: 0,
-    profitPercentage: 0
-  }))
+  simulationData.value = holdings.value.map(holding => {
+    const avgPrice = Number(holding.average_price) || 0
+    return {
+      holding,
+      purchasePrice: avgPrice,
+      purchasePriceDisplay: avgPrice > 0 ? formatNumberInput(avgPrice) : '',
+      currentPrice: 0,
+      currentPriceDisplay: '',
+      calculatedCurrentValue: 0,
+      profit: 0,
+      profitPercentage: 0
+    }
+  })
 }
 
 // Expandable cards state
@@ -125,6 +128,12 @@ const profitColor = computed(() => {
   return totalProfit.value >= 0 ? 'success' : 'error'
 })
 
+const showSummary = ref(false)
+
+function toggleSummary() {
+  showSummary.value = !showSummary.value
+}
+
 const assetTypeIcons: Record<string, string> = {
   gold: 'mdi-gold',
   stock: 'mdi-chart-line',
@@ -145,17 +154,7 @@ function getProfitColor(profit: number) {
 
 function handleClose() {
   dialog.value = false
-}
-
-function handleSaveAndClose() {
-  // Save simulation result to composable state
-  saveSimulationResult({
-    totalInitial: totalInitialInvestment.value,
-    totalCurrent: totalCurrentValue.value,
-    totalProfit: totalProfit.value,
-    profitPercentage: totalProfitPercentage.value
-  })
-  dialog.value = false
+  showSummary.value = false
 }
 
 watch(() => props.modelValue, (newVal) => {
@@ -192,21 +191,23 @@ watch(() => props.modelValue, (newVal) => {
           <p class="text-body-1 text-medium-emphasis mt-4">No holdings to simulate</p>
         </div>
 
-        <div v-else class="holdings-list">
+        <template v-else>
           <VCard 
             v-for="(data, index) in simulationData" 
             :key="data.holding.id"
-            elevation="2"
-            class="mb-4"
+            class="group-card mb-4"
           >
             <!-- Holding Header (Clickable) -->
-            <VCardTitle class="pa-4 cursor-pointer" @click="toggleCard(data.holding.id)">
+            <VCardTitle class="pa-4 cursor-pointer group-header" @click="toggleCard(data.holding.id)">
               <div class="d-flex align-center">
                 <VIcon :icon="getAssetIcon((data.holding as any).asset_type)" size="large" color="primary" class="mr-3" />
                 <div class="flex-grow-1">
                   <div class="text-subtitle-1 font-weight-semibold">{{ data.holding.instrument_name }}</div>
                   <div class="text-caption text-medium-emphasis">
-                    {{ data.holding.platform }} • {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gram' : 'lot' }}
+                    {{ data.holding.platform }} • 
+                    {{ formatCurrency(data.holding.initial_investment) }}
+                    <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
+                    {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gram' : 'lot' }}
                   </div>
                   <div v-if="data.holding.purchase_date" class="text-caption text-medium-emphasis">
                     <VIcon icon="mdi-calendar" size="x-small" class="mr-1" />
@@ -228,26 +229,40 @@ watch(() => props.modelValue, (newVal) => {
 
             <!-- Expandable Content -->
             <Transition name="expand">
-              <VCardText v-show="expandedCards[data.holding.id]" class="pa-4 pt-0">
-
-              <!-- Investment Info -->
-              <VRow class="mb-3">
-                <VCol cols="12" sm="6">
-                  <div class="text-caption text-medium-emphasis">Initial Investment</div>
-                  <div class="text-body-2 font-weight-medium">
-                    {{ formatCurrency(data.holding.initial_investment) }}
+              <VCardText v-show="expandedCards[data.holding.id]" class="pa-4">
+                <!-- Current Value & Profit Display -->
+              <VAlert 
+                v-if="data.purchasePrice > 0 && data.currentPrice > 0"
+                :color="getProfitColor(data.profit)" 
+                variant="tonal" 
+                density="compact"
+                class="mb-3"
+              >
+                <div class="d-flex flex-column gap-2">
+                  <div class="d-flex justify-space-between align-center">
+                    <span class="text-caption font-weight-medium">
+                      <VIcon icon="mdi-chart-line" size="small" class="mr-1" />
+                      Current Value
+                    </span>
+                    <span class="text-body-2 font-weight-bold">
+                      {{ formatCurrency(data.calculatedCurrentValue) }}
+                    </span>
                   </div>
-                </VCol>
-                <VCol cols="12" sm="6">
-                  <div class="text-caption text-medium-emphasis">Current Value (Calculated)</div>
-                  <div class="text-body-2 font-weight-bold" :class="`text-${getProfitColor(data.profit)}`">
-                    {{ formatCurrency(data.calculatedCurrentValue) }}
+                  <VDivider />
+                  <div class="d-flex justify-space-between align-center">
+                    <span class="text-caption font-weight-medium">
+                      <VIcon :icon="data.profit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" size="small" class="mr-1" />
+                      Profit/Loss
+                    </span>
+                    <span class="text-body-2 font-weight-bold">
+                      {{ data.profit >= 0 ? '+' : '' }}{{ formatCurrency(data.profit) }}
+                    </span>
                   </div>
-                </VCol>
-              </VRow>
+                </div>
+              </VAlert>
 
               <!-- Price Inputs -->
-              <VRow>
+              <VRow class="mt-2">
                 <VCol cols="12" sm="6">
                   <VTextField
                     :model-value="data.purchasePriceDisplay"
@@ -256,6 +271,7 @@ watch(() => props.modelValue, (newVal) => {
                     density="compact"
                     placeholder="e.g., 1000000"
                     inputmode="numeric"
+                    readonly
                     @input="handlePurchasePriceInput(index, $event)"
                   >
                     <template #prepend-inner>
@@ -269,8 +285,7 @@ watch(() => props.modelValue, (newVal) => {
                         <VCard max-width="300" class="pa-3">
                           <div class="text-caption">
                             <div class="font-weight-semibold mb-1">Purchase Price per Unit</div>
-                            <div class="text-medium-emphasis">Enter the price per unit when you first purchased this asset. This helps calculate your profit/loss.</div>
-                            <div class="mt-2 text-medium-emphasis">Example: If you bought gold at Rp 1,000,000/gram, enter 1000000</div>
+                            <div class="text-medium-emphasis">Price per unit when you first purchased this asset. This helps calculate your profit/loss.</div>
                           </div>
                         </VCard>
                       </VMenu>
@@ -307,32 +322,26 @@ watch(() => props.modelValue, (newVal) => {
                   </VTextField>
                 </VCol>
               </VRow>
-
-              <!-- Profit Display -->
-              <VAlert 
-                v-if="data.purchasePrice > 0 && data.currentPrice > 0"
-                :color="getProfitColor(data.profit)" 
-                variant="tonal" 
-                density="compact"
-                class="mt-3"
-              >
-                <div class="d-flex justify-space-between align-center">
-                  <span class="text-caption font-weight-medium">
-                    <VIcon :icon="data.profit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" size="small" class="mr-1" />
-                    Profit/Loss
-                  </span>
-                  <span class="text-body-2 font-weight-bold">
-                    {{ formatCurrency(data.profit) }}
-                  </span>
-                </div>
-              </VAlert>
               </VCardText>
             </Transition>
           </VCard>
+        </template>
+
+        <!-- Toggle Summary Button -->
+        <div v-if="holdings.length > 0 && totalCurrentValue > 0" class="mt-6 text-center">
+          <VBtn
+            :color="showSummary ? 'grey' : 'primary'"
+            :variant="showSummary ? 'text' : 'flat'"
+            :prepend-icon="showSummary ? 'mdi-chevron-up' : 'mdi-chart-line-variant'"
+            @click="toggleSummary"
+          >
+            {{ showSummary ? 'Hide Summary & Chart' : 'Show Summary & Chart' }}
+          </VBtn>
         </div>
 
         <!-- Summary Section -->
-        <VCard v-if="holdings.length > 0" elevation="4" class="mt-6 bg-primary-lighten-5">
+        <Transition name="expand">
+        <VCard v-show="showSummary && holdings.length > 0 && totalCurrentValue > 0" elevation="4" class="mt-4 bg-primary-lighten-5">
           <VCardTitle class="pa-4 text-primary">
             <VIcon icon="mdi-chart-box" class="mr-2" />
             Summary
@@ -358,42 +367,51 @@ watch(() => props.modelValue, (newVal) => {
               </VCol>
               <VCol cols="12" md="4">
                 <div class="summary-item">
-                  <div class="text-caption text-medium-emphasis mb-1">Total Profit/Loss</div>
+                    <div class="d-flex justify-space-between">
+                        <div class="text-caption text-medium-emphasis mb-1">Total Profit/Loss</div>
+                        <VChip 
+                            v-if="totalCurrentValue > 0"
+                            :color="profitColor" 
+                            size="x-small" 
+                            variant="flat"
+                            class="mt-1"
+                        >
+                            <VIcon :icon="totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" start size="small" />
+                            {{ totalProfit >= 0 ? '+' : '' }}{{ totalProfitPercentage.toFixed(2) }}%
+                        </VChip>
+                    </div>
                   <div v-if="totalCurrentValue > 0" class="text-h6 font-weight-bold" :class="`text-${profitColor}`">
                     {{ totalProfit >= 0 ? '+' : '' }}{{ formatCurrency(totalProfit) }}
                   </div>
                   <div v-else class="text-h6 font-weight-bold text-medium-emphasis">-</div>
-                  <VChip 
-                    v-if="totalCurrentValue > 0"
-                    :color="profitColor" 
-                    size="small" 
-                    variant="flat"
-                    class="mt-1"
-                  >
-                    <VIcon :icon="totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" start size="small" />
-                    {{ totalProfit >= 0 ? '+' : '' }}{{ totalProfitPercentage.toFixed(2) }}%
-                  </VChip>
                 </div>
               </VCol>
             </VRow>
+
+            <!-- Comparison Chart (always visible when Summary is shown) -->
+            <VCard elevation="0" class="mt-4">
+              <VCardText class="pa-4">
+                <ComparisonChart
+                  :initial-investment="totalInitialInvestment"
+                  :current-value="totalCurrentValue"
+                />
+              </VCardText>
+            </VCard>
           </VCardText>
         </VCard>
+        </Transition>
       </VCardText>
 
       <VDivider />
 
       <VCardActions class="pa-4">
         <VSpacer />
-        <VBtn color="grey" variant="text" @click="handleClose">
-          Close
-        </VBtn>
         <VBtn 
-          v-if="totalCurrentValue > 0"
           color="primary" 
           variant="flat" 
-          @click="handleSaveAndClose"
+          @click="handleClose"
         >
-          Save & View Chart
+          Close
         </VBtn>
       </VCardActions>
     </VCard>
@@ -404,6 +422,23 @@ watch(() => props.modelValue, (newVal) => {
 .cursor-pointer {
   cursor: pointer;
   user-select: none;
+}
+
+/* Group card styling - match InvestmentPortfolio */
+.group-card {
+  background: rgba(15, 118, 110, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.1);
+  transition: all 0.2s;
+}
+
+.group-header {
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.group-card:hover .group-header {
+  background: rgba(15, 118, 110, 0.03);
 }
 
 /* Expand transition */
@@ -427,11 +462,6 @@ watch(() => props.modelValue, (newVal) => {
 </style>
 
 <style scoped>
-.holdings-list {
-  max-height: 500px;
-  overflow-y: auto;
-}
-
 .holding-card {
   transition: all 0.2s ease;
 }

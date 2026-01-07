@@ -46,7 +46,7 @@ function openSimulateDialog() {
 
 <template>
   <VCard class="summary-card bg-surface" elevation="0" variant="flat">
-    <VCardTitle class="card-header pa-5" @click="toggleExpand">
+    <VCardTitle class="card-header pa-5">
       <div class="header-content">
         <div class="title-section">
           <div class="d-flex align-center text-body-1 text-sm-h6 text-primary">
@@ -59,7 +59,7 @@ function openSimulateDialog() {
           :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" 
           size="small" 
           variant="text"
-          @click.stop="toggleExpand"
+          @click="toggleExpand"
         />
       </div>
     </VCardTitle>
