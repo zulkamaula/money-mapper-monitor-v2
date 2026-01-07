@@ -104,12 +104,7 @@ watch(() => props.data, () => {
     </div>
     
     <div v-else class="chart-wrapper">
-      <!-- Canvas Chart -->
-      <div ref="chartContainer" class="chart-canvas">
-        <canvas width="200" height="200"></canvas>
-      </div>
-      
-      <!-- Legend -->
+      <!-- Legend (Left side) -->
       <div class="chart-legend">
         <div
           v-for="item in chartDataWithPercentages"
@@ -125,6 +120,11 @@ watch(() => props.data, () => {
           </div>
         </div>
       </div>
+      
+      <!-- Canvas Chart (Right side) -->
+      <div ref="chartContainer" class="chart-canvas">
+        <canvas width="200" height="200"></canvas>
+      </div>
     </div>
   </div>
 </template>
@@ -136,15 +136,17 @@ watch(() => props.data, () => {
 
 .chart-wrapper {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
+  justify-content: center;
 }
 
 .chart-canvas {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .chart-canvas canvas {
@@ -156,8 +158,22 @@ watch(() => props.data, () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  max-width: 300px;
+  flex: 1;
+  min-width: 150px;
+  max-width: 200px;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 600px) {
+  .chart-wrapper {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .chart-legend {
+    width: 100%;
+    max-width: 300px;
+  }
 }
 
 .legend-item {

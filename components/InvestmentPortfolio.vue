@@ -107,13 +107,10 @@ function toggleGroup(assetType: string) {
           <div v-else-if="holdings.length === 0" class="text-center py-12">
             <VIcon icon="mdi-briefcase-off-outline" size="48" color="grey-lighten-1" class="mb-4" />
             <p class="text-h6 text-medium-emphasis mb-2">No Holdings Yet</p>
-            <p class="text-caption text-medium-emphasis mb-4">
-              Create holdings from your budget allocations in the Allocation Card
-            </p>
             <VAlert type="info" variant="tonal" class="mx-auto" border="start" prominent title="Allocation-first workflow" style="max-width: 500px;">
               <template #text>
                 <div class="text-caption text-left">
-                  Holdings can only be created from allocations
+                  Holdings can only be created from allocation cards
                 </div>
               </template>
             </VAlert>
