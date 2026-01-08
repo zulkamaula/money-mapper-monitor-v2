@@ -262,6 +262,11 @@ export const useInvestments = () => {
     simulationResult.value = null
   }
 
+  // Clear cache for a specific book (force fresh fetch)
+  function clearCache(bookId: string) {
+    cache.value.delete(bookId)
+  }
+
   return {
     // State
     holdings,
@@ -280,6 +285,7 @@ export const useInvestments = () => {
     deleteHolding,
     handleDeleteHolding,
     saveSimulationResult,
-    clearSimulationResult
+    clearSimulationResult,
+    clearCache
   }
 }

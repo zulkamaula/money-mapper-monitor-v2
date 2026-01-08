@@ -115,7 +115,8 @@ export const useAllocations = () => {
       
       // Reload holdings to sync with cascade-deleted holdings
       if (selectedBook.value) {
-        const { loadInvestments } = useInvestments()
+        const { loadInvestments, clearCache } = useInvestments()
+        clearCache(selectedBook.value.id) // Clear cache to force fresh fetch
         await loadInvestments(selectedBook.value.id)
       }
       
