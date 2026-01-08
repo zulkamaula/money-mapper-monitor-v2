@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/format'
+import { extractInstrumentAlias } from '~/utils/instrumentAlias'
 import type { Holding } from '~/types/models'
 
 const { holdings, loading, holdingsByAsset, handleDeleteHolding } = useInvestments()
@@ -8,6 +9,11 @@ const { navigateToAllocation } = useAllocationNavigation()
 const showHoldingDialog = ref(false)
 const editingHolding = ref<Holding | undefined>(undefined)
 const isExpanded = ref(false)
+const expandedNotes = ref<Record<string, boolean>>({})
+
+function toggleNote(holdingId: string) {
+  expandedNotes.value[holdingId] = !expandedNotes.value[holdingId]
+}
 
 function openEditDialog(holding: Holding) {
   editingHolding.value = holding
@@ -138,8 +144,8 @@ function toggleGroup(assetType: string) {
                         <VCardText class="pa-4 bg-white">
                           <!-- Platform & Actions -->
                           <div class="d-flex align-center justify-space-between mb-2">
-                            <VChip size="small" color="primary" variant="tonal">
-                              {{ holding.platform }}
+                            <VChip size="x-small" color="primary" variant="tonal">
+                              {{ extractInstrumentAlias(holding.instrument_name) }}
                             </VChip>
                             <VMenu>
                               <template v-slot:activator="{ props }">
@@ -159,9 +165,9 @@ function toggleGroup(assetType: string) {
                             </VMenu>
                           </div>
 
-                          <!-- Instrument Name -->
+                          <!-- Platform -->
                           <div class="d-flex justify-space-between align-center mb-2">
-                            <div class="text-body-2 font-weight-semibold text-primary">{{ holding.instrument_name }}</div>
+                            <div class="text-body-2 font-weight-semibold text-primary">{{ holding.platform }}</div>
                           </div>
 
                           <!-- Values -->
@@ -185,9 +191,24 @@ function toggleGroup(assetType: string) {
                               <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
                               Linked to Budget
                             </div>
-                            <p v-if="holding.notes" class="text-caption text-medium-emphasis mt-1">
-                              {{ holding.notes }}
-                            </p>
+                            <div v-if="holding.notes" class="mt-1 d-flex flex-column">
+                              <div class="d-flex align-baseline font-italic">
+                                <VIcon icon="mdi-note-text-outline" size="x-small" class="mr-1 text-medium-emphasis" />
+                                <p 
+                                  class="text-caption text-medium-emphasis my-0"
+                                  :class="{ 'note-collapsed': !expandedNotes[holding.id] }"
+                                >
+                                  {{ holding.notes }}
+                                </p>
+                              </div>
+                              <span
+                                v-if="holding.notes.length > 20 && ($vuetify.display.mdAndUp || $vuetify.display.xs) || holding.notes.length > 19 && $vuetify.display.lg"
+                                class="align-self-end text-caption text-none d-inline-block underline text-info w-full"
+                                @click.stop="toggleNote(holding.id)"
+                              >
+                                {{ expandedNotes[holding.id] ? 'Show less' : 'See more' }}
+                              </span>
+                            </div>
                           </div>
                         </VCardText>
                       </VCard>
@@ -309,5 +330,15 @@ function toggleGroup(assetType: string) {
   color: rgb(var(--v-theme-primary)) !important;
   text-decoration-style: solid;
   transform: translateX(2px);
+}
+
+.note-collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+  word-break: break-word;
 }
 </style>

@@ -425,8 +425,8 @@ watch(() => props.modelValue, (newVal) => {
                           <div class="text-caption font-weight-bold mb-1">Total amount you invested initially</div>
                           <div class="text-caption">
                             <strong>Examples:</strong><br>
-                            • Emas: 10 gram × Rp 1.000.000 = Rp 10.000.000<br>
-                            • Saham: 100 shares × Rp 10.000 = Rp 1.000.000<br>
+                            • Gold: 10 gram × Rp 1.000.000 = Rp 10.000.000<br>
+                            • Stock: 100 shares × Rp 10.000 = Rp 1.000.000<br>
                             • ETF: 5 units × Rp 500.000 = Rp 2.500.000
                           </div>
                         </VCard>

@@ -1,12 +1,12 @@
 // Asset Types
 export const assetTypes = [
-  { value: 'gold', title: 'Emas', icon: 'mdi-gold' },
-  { value: 'stock', title: 'Saham', icon: 'mdi-chart-line' },
+  { value: 'gold', title: 'Gold', icon: 'mdi-gold' },
+  { value: 'stock', title: 'Stock', icon: 'mdi-chart-line' },
   { value: 'etf', title: 'ETF', icon: 'mdi-chart-multiple' },
-  { value: 'mutual_fund', title: 'Reksadana', icon: 'mdi-chart-box' },
-  { value: 'bond', title: 'Obligasi', icon: 'mdi-bank' },
+  { value: 'mutual_fund', title: 'Mutual Fund', icon: 'mdi-chart-box' },
+  { value: 'bond', title: 'Bond', icon: 'mdi-bank' },
   { value: 'crypto', title: 'Crypto', icon: 'mdi-currency-btc' },
-  { value: 'other', title: 'Lainnya', icon: 'mdi-package-variant' }
+  { value: 'other', title: 'Other', icon: 'mdi-package-variant' }
 ]
 
 // Common Platforms
@@ -27,10 +27,11 @@ export const commonPlatforms = [
 // Instrument Options by Asset Type
 export const instrumentOptionsByAssetType: Record<string, string[]> = {
   gold: [
-    'Emas Antam',
-    'Emas UBS',
-    'Emas Pegadaian',
-    'Emas Galeri 24'
+    'Gold Digital',
+    'Gold Antam',
+    'Gold UBS',
+    'Gold Pegadaian',
+    'Gold Galeri 24'
   ],
   stock: [
     'BBCA - Bank Central Asia',
