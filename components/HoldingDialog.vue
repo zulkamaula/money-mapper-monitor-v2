@@ -246,6 +246,7 @@ watch(() => props.modelValue, (newVal) => {
       // Creating from allocation - pre-fill allocation data
       form.value.linked_allocation_id = props.allocationContext.id
       form.value.initial_investment = props.allocationContext.source_amount
+      form.value.purchase_date = formatDateInput(props.allocationContext.date)
       initialDisplay.value = formatNumberInput(props.allocationContext.source_amount)
       currentStep.value = 1
     } else if (props.holding) {

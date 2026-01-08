@@ -3,6 +3,7 @@ import { formatCurrency } from '~/utils/format'
 import type { Holding } from '~/types/models'
 
 const { holdings, loading, holdingsByAsset, handleDeleteHolding } = useInvestments()
+const { navigateToAllocation } = useAllocationNavigation()
 
 const showHoldingDialog = ref(false)
 const editingHolding = ref<Holding | undefined>(undefined)
@@ -176,7 +177,11 @@ function toggleGroup(assetType: string) {
                               <VIcon :icon="getAssetIcon(holding.asset_type as string)" size="x-small" class="mr-1" />
                               {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
                             </div>
-                            <div v-if="holding.linked_allocation_id" class="text-caption text-medium-emphasis my-1">
+                            <div 
+                              v-if="holding.linked_allocation_id" 
+                              class="text-caption text-primary my-1 linked-budget-text"
+                              @click.stop="navigateToAllocation(holding.linked_allocation_id)"
+                            >
                               <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
                               Linked to Budget
                             </div>
@@ -288,5 +293,21 @@ function toggleGroup(assetType: string) {
   opacity: 0.5;
   pointer-events: none;
   user-select: none;
+}
+
+.linked-budget-text {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.linked-budget-text:hover {
+  color: rgb(var(--v-theme-primary)) !important;
+  text-decoration-style: solid;
+  transform: translateX(2px);
 }
 </style>

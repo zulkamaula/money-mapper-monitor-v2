@@ -9,6 +9,7 @@ const { allocations, loading, loadAllocations, deleteAllocation } = useAllocatio
 const { holdings, loadInvestments } = useInvestments()
 const { success: showSuccess, error: showError } = useNotification()
 const { showDialog: showConfirmDialog } = useConfirmDialog()
+const { targetAllocationId, clearTarget } = useAllocationNavigation()
 
 // Reload when selected book changes
 watch(() => selectedBook.value, async (newBook) => {
@@ -36,6 +37,35 @@ const recentAllocations = computed(() => {
 function toggleExpand(id: string) {
   expandedAllocation.value = expandedAllocation.value === id ? null : id
 }
+
+// Watch for navigation request from other components
+watch(targetAllocationId, async (allocationId) => {
+  if (allocationId) {
+    // Ensure main card is expanded
+    isExpanded.value = true
+    
+    // Wait for DOM update
+    await nextTick()
+    
+    // Scroll to allocation card
+    const element = document.getElementById(`allocation-${allocationId}`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      
+      // Expand the allocation card
+      expandedAllocation.value = allocationId
+      
+      // Highlight effect (optional)
+      element.classList.add('highlight-allocation')
+      setTimeout(() => {
+        element.classList.remove('highlight-allocation')
+      }, 2000)
+    }
+    
+    // Clear target after navigation
+    clearTarget()
+  }
+})
 
 async function copyAmount(amount: number, itemId: string) {
   try {
@@ -97,9 +127,17 @@ async function handleDelete(id: string) {
   const allocation = allocations.value.find(a => a.id === id)
   if (!allocation) return
 
+  // Check if there are holdings linked to this allocation
+  const linkedHoldings = getHoldingsForAllocation(id)
+  const hasLinkedHoldings = linkedHoldings.length > 0
+  
+  const warningMessage = hasLinkedHoldings
+    ? `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?\n\n This will also delete ${linkedHoldings.length} linked investment ${linkedHoldings.length === 1 ? 'holding' : 'holdings'}.`
+    : `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`
+
   await showConfirmDialog({
     title: 'Delete Allocation?',
-    message: `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`,
+    message: warningMessage,
     icon: 'mdi-delete-alert',
     iconColor: 'error',
     confirmText: 'Delete',
@@ -161,7 +199,7 @@ async function handleDelete(id: string) {
 
         <VList v-else class="allocation-list">
           <VListItem v-for="allocation in recentAllocations" :key="allocation.id" class="allocation-item mb-3">
-            <div class="allocation-card">
+            <div :id="`allocation-${allocation.id}`" class="allocation-card">
               <div class="d-flex justify-space-between align-center cursor-pointer" @click="toggleExpand(allocation.id)">
                 <div>
                   <div class="text-body-1 font-weight-semibold text-primary mb-0 mb-sm-1">{{ formatCurrency(allocation.source_amount) }}</div>
@@ -340,13 +378,29 @@ async function handleDelete(id: string) {
   border-radius: 12px;
   padding: 16px;
   border: 1px solid rgba(15, 118, 110, 0.1);
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   width: 100%;
 }
 
 .allocation-card:hover {
   background: rgba(15, 118, 110, 0.08);
   border-color: rgba(15, 118, 110, 0.2);
+}
+
+.highlight-allocation {
+  animation: highlight-pulse 2s ease-in-out;
+  border-color: rgba(15, 118, 110, 0.5) !important;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    background: rgba(15, 118, 110, 0.05);
+    box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.4);
+  }
+  50% {
+    background: rgba(15, 118, 110, 0.15);
+    box-shadow: 0 0 0 8px rgba(15, 118, 110, 0);
+  }
 }
 
 .allocation-details {
