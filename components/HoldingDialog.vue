@@ -74,18 +74,55 @@ const groupedInstrumentOptions = computed(() => {
   return items
 })
 
+// Check if instrument is custom (not in predefined options)
+const isCustomInstrument = computed(() => {
+  if (!form.value.instrument_name || isEditMode.value) return false
+  
+  // Check if it's a predefined instrument
+  const found = groupedInstrumentOptions.value.find(
+    item => item.type !== 'subheader' && item.type !== 'divider' && item.value === form.value.instrument_name
+  )
+  
+  return !found
+})
+
 // Auto-derive asset type and asset name from selected instrument
 watch(() => form.value.instrument_name, (newInstrument) => {
-  if (newInstrument && !isEditMode.value) {
-    // Find the selected instrument in grouped options (skip subheaders and dividers)
-    const selected = groupedInstrumentOptions.value.find(
-      item => item.type !== 'subheader' && item.type !== 'divider' && item.value === newInstrument
-    )
-    
-    if (selected) {
-      // Auto-set asset type and asset name
-      form.value.asset_type = selected.assetType
-      form.value.asset_name = selected.group
+  if (!isEditMode.value) {
+    if (newInstrument) {
+      // Find the selected instrument in grouped options (skip subheaders and dividers)
+      const selected = groupedInstrumentOptions.value.find(
+        item => item.type !== 'subheader' && item.type !== 'divider' && item.value === newInstrument
+      )
+      
+      if (selected) {
+        // Auto-set asset type and asset name for predefined instrument
+        form.value.asset_type = selected.assetType
+        form.value.asset_name = selected.group
+      } else {
+        // Custom instrument - clear asset type so user must select
+        form.value.asset_type = null
+        form.value.asset_name = ''
+      }
+    } else {
+      // Instrument cleared - reset asset type
+      form.value.asset_type = null
+      form.value.asset_name = ''
+    }
+  }
+})
+
+// Update purchase_date when user selects allocation in Step 3
+watch(() => form.value.linked_allocation_id, (newAllocationId) => {
+  // Only auto-update date when:
+  // 1. Not in edit mode
+  // 2. Not from allocation context (that's already set in Step 2)
+  // 3. User actually selected an allocation
+  if (!isEditMode.value && !props.allocationContext && newAllocationId) {
+    const selectedAllocation = allocations.value.find(a => a.id === newAllocationId)
+    if (selectedAllocation) {
+      // Update purchase_date to match the selected allocation's date
+      form.value.purchase_date = formatDateInput(selectedAllocation.date)
     }
   }
 })
@@ -95,6 +132,22 @@ const initialDisplay = ref('')
 const averagePriceDisplay = ref('')
 const submitting = ref(false)
 const currentStep = ref(1)
+
+// Computed icon for instrument field
+const instrumentIcon = computed(() => {
+  // If custom instrument, always show certificate icon
+  if (isCustomInstrument.value) {
+    return 'mdi-certificate'
+  }
+  
+  // For predefined instruments, show asset type icon
+  if (form.value.asset_type) {
+    const assetType = assetTypes.find(t => t.value === form.value.asset_type)
+    return assetType?.icon || 'mdi-certificate'
+  }
+  
+  return 'mdi-certificate'
+})
 
 // Auto-calculated quantity (readonly)
 const calculatedQuantity = computed(() => {
@@ -123,7 +176,7 @@ const allocationItems = computed(() => [
   { value: undefined, title: 'None (No Link)' },
   ...allocations.value.map(alloc => ({
     value: alloc.id,
-    title: `${new Date(alloc.created_at).toLocaleDateString()} - ${formatCurrency(alloc.source_amount)}`
+    title: `${new Date(alloc.date).toLocaleDateString()} - ${formatCurrency(alloc.source_amount)}`
   }))
 ])
 
@@ -161,7 +214,15 @@ function prevStep() {
 
 const canProceedStep1 = computed(() => {
   if (isEditMode.value) return true
-  return form.value.platform && form.value.instrument_name
+  
+  const hasBasicFields = form.value.platform && form.value.instrument_name
+  
+  // If custom instrument, also require asset type
+  if (isCustomInstrument.value) {
+    return hasBasicFields && form.value.asset_type
+  }
+  
+  return hasBasicFields
 })
 
 const isFromAllocation = computed(() => !!props.allocationContext)
@@ -346,14 +407,15 @@ watch(() => props.modelValue, (newVal) => {
               <VRow>
                 <!-- Instrument (grouped by asset type) -->
                 <VCol cols="12" md="6">
-                  <VAutocomplete
+                  <VCombobox
                     v-model="form.instrument_name"
                     label="Instrument"
                     :items="groupedInstrumentOptions"
                     item-title="title"
                     item-value="value"
-                    placeholder="Search or select instrument"
-                    hint="Grouped by asset type - type to search"
+                    :return-object="false"
+                    placeholder="Search or type custom instrument"
+                    hint="Type to search or add custom instrument"
                     persistent-hint
                     variant="outlined"
                     :disabled="isEditMode || submitting"
@@ -361,7 +423,7 @@ watch(() => props.modelValue, (newVal) => {
                     clearable
                   >
                     <template v-slot:prepend-inner>
-                      <VIcon icon="mdi-certificate" size="20" />
+                      <VIcon :icon="instrumentIcon" size="20" />
                     </template>
                     
                     <template v-slot:item="{ props, item }">
@@ -371,8 +433,41 @@ watch(() => props.modelValue, (newVal) => {
                         </template>
                       </VListItem>
                     </template>
-                  </VAutocomplete>
+                  </VCombobox>
                 </VCol>
+
+                <!-- Asset Type (only for custom instruments) -->
+                <Transition name="slide-fade">
+                  <VCol v-if="isCustomInstrument" cols="12" md="6">
+                    <VSelect
+                      v-model="form.asset_type"
+                      label="Asset Type *"
+                      :items="assetTypes"
+                      item-title="title"
+                      item-value="value"
+                      placeholder="Select asset type"
+                      variant="outlined"
+                      :disabled="submitting"
+                      :rules="[v => !!v || 'Asset type is required for custom instruments']"
+                    >
+                      <template v-slot:prepend-inner>
+                        <VIcon 
+                          v-if="form.asset_type" 
+                          :icon="assetTypes.find(t => t.value === form.asset_type)?.icon || 'mdi-tag'" 
+                          size="20" 
+                        />
+                        <VIcon v-else icon="mdi-tag" size="20" />
+                      </template>
+                      <template v-slot:item="{ props, item }">
+                        <VListItem v-bind="props" :title="item.raw.title">
+                          <template v-slot:prepend>
+                            <VIcon :icon="item.raw.icon" />
+                          </template>
+                        </VListItem>
+                      </template>
+                    </VSelect>
+                  </VCol>
+                </Transition>
 
                 <!-- Platform -->
                 <VCol cols="12" md="6">
@@ -442,6 +537,8 @@ watch(() => props.modelValue, (newVal) => {
                     type="date"
                     variant="outlined"
                     :disabled="submitting"
+                    :hint="isFromAllocation ? 'From allocation (editable)' : 'Select purchase date'"
+                    persistent-hint
                   />
                 </VCol>
 
@@ -605,5 +702,24 @@ watch(() => props.modelValue, (newVal) => {
   .stepper-header-scroll :deep(.v-stepper-item) {
     scroll-snap-align: center;
   }
+}
+
+/* Transition for asset type selector */
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.slide-fade-enter-from {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
 }
 </style>

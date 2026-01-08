@@ -200,9 +200,9 @@ async function handleDelete(id: string) {
         <VList v-else class="allocation-list">
           <VListItem v-for="allocation in recentAllocations" :key="allocation.id" class="allocation-item mb-3">
             <div :id="`allocation-${allocation.id}`" class="allocation-card">
-              <div class="d-flex justify-space-between align-center cursor-pointer" @click="toggleExpand(allocation.id)">
-                <div>
-                  <div class="text-body-1 font-weight-semibold text-primary mb-0 mb-sm-1">{{ formatCurrency(allocation.source_amount) }}</div>
+              <div class="d-flex justify-space-between ga-1 align-center cursor-pointer" @click="toggleExpand(allocation.id)">
+                <div class="flex-grow-1 d-flex flex-wrap justify-space-between flex-column flex-sm-row align-sm-center">
+                  <div class="text-body-1 font-weight-semibold text-primary">{{ formatCurrency(allocation.source_amount) }}</div>
                   <div class="text-caption text-medium-emphasis">{{ formatDate(allocation.date) }}</div>
                 </div>
                 <VIcon :icon="expandedAllocation === allocation.id ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
