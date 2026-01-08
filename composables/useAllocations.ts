@@ -113,6 +113,12 @@ export const useAllocations = () => {
         cache.value.set(selectedBook.value.id, [...allocations.value])
       }
       
+      // Reload holdings to sync with cascade-deleted holdings
+      if (selectedBook.value) {
+        const { loadInvestments } = useInvestments()
+        await loadInvestments(selectedBook.value.id)
+      }
+      
       return true
     } catch (error) {
       console.error('Failed to delete allocation:', error)
