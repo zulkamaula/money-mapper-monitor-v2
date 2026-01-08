@@ -49,6 +49,7 @@ export function formatDate(date: string | Date): string {
 /**
  * Convert date to YYYY-MM-DD format for input fields
  * Handles string, Date object, null, or undefined
+ * Uses local timezone to avoid one-day offset issues
  * Examples:
  * - "2025-01-15T00:00:00.000Z" → "2025-01-15"
  * - new Date("2025-01-15") → "2025-01-15"
@@ -56,17 +57,34 @@ export function formatDate(date: string | Date): string {
  */
 export function formatDateInput(date: string | Date | null | undefined): string {
   if (!date) {
-    return new Date().toISOString().split('T')[0]!
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  // If already in YYYY-MM-DD format, return as-is
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date
   }
   
   const d = typeof date === 'string' ? new Date(date) : date
   
   // Validate date
   if (isNaN(d.getTime())) {
-    return new Date().toISOString().split('T')[0]!
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
   
-  return d.toISOString().split('T')[0]!
+  // Use local date components to avoid timezone offset
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**

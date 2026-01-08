@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity, formatDateInput } from '~/utils/format'
+import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity, formatDateInput, formatDate } from '~/utils/format'
 import type { Holding, Allocation } from '~/types/models'
 import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/constants/investmentOptions'
 
@@ -176,7 +176,7 @@ const allocationItems = computed(() => [
   { value: undefined, title: 'None (No Link)' },
   ...allocations.value.map(alloc => ({
     value: alloc.id,
-    title: `${new Date(alloc.date).toLocaleDateString()} - ${formatCurrency(alloc.source_amount)}`
+    title: `${formatDate(alloc.date)} - ${formatCurrency(alloc.source_amount)}`
   }))
 ])
 
@@ -537,7 +537,7 @@ watch(() => props.modelValue, (newVal) => {
                     type="date"
                     variant="outlined"
                     :disabled="submitting"
-                    :hint="isFromAllocation ? 'From allocation (editable)' : 'Select purchase date'"
+                    :hint="isFromAllocation ? '' : 'Select purchase date'"
                     persistent-hint
                   />
                 </VCol>
