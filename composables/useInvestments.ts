@@ -1,4 +1,5 @@
 import type { Holding } from '~/types/models'
+import { assetTypes } from '~/constants/investmentOptions'
 
 export const useInvestments = () => {
   const { success: showSuccess, error: showError } = useNotification()
@@ -35,17 +36,6 @@ export const useInvestments = () => {
   // Note: current_value, totalProfit, profitPercentage are now calculated in Simulate dialog
   // Holdings only track initial_investment and quantity
 
-  // Map asset types to display names
-  const assetTypeNames: Record<string, string> = {
-    gold: 'Emas',
-    stock: 'Saham',
-    etf: 'ETF',
-    mutual_fund: 'Reksadana',
-    bond: 'Obligasi',
-    crypto: 'Crypto',
-    other: 'Lainnya'
-  }
-
   // Group holdings by asset_type
   const holdingsByAsset = computed(() => {
     const grouped: Record<string, { name: string; holdings: Holding[] }> = {}
@@ -53,8 +43,9 @@ export const useInvestments = () => {
     holdings.value.forEach(holding => {
       const assetType = (holding as any).asset_type
       if (!grouped[assetType]) {
+        const assetTypeInfo = assetTypes.find(at => at.value === assetType)
         grouped[assetType] = {
-          name: assetTypeNames[assetType] || 'Unknown',
+          name: assetTypeInfo?.title || 'Unknown',
           holdings: []
         }
       }
@@ -72,8 +63,9 @@ export const useInvestments = () => {
       const type = (holding as any).asset_type
       
       if (!allocation[type]) {
+        const assetTypeInfo = assetTypes.find(at => at.value === type)
         allocation[type] = { 
-          name: assetTypeNames[type] || 'Unknown', 
+          name: assetTypeInfo?.title || 'Unknown', 
           value: 0 
         }
       }
