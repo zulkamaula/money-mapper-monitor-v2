@@ -22,7 +22,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 404, statusText: 'Money book not found' })
   }
 
-  // Get allocations with their items
+  // Get allocations with their items and transaction totals in single query
+  // ✅ Pattern: Aggregate related data to prevent N+1 queries
+  // Instead of 1 + N API calls, this returns everything in ONE query
+  // See docs/development/API_PATTERNS.md "Pattern 1: Aggregate Data in Single Query"
   const allocations = await db`
     SELECT 
       a.id, 
@@ -32,7 +35,7 @@ export default defineEventHandler(async (event) => {
       a.notes, 
       a.created_at,
       json_agg(
-        json_build_object(
+        DISTINCT jsonb_build_object(
           'id', ai.id,
           'allocation_id', ai.allocation_id,
           'pocket_id', ai.pocket_id,
@@ -40,10 +43,21 @@ export default defineEventHandler(async (event) => {
           'pocket_percentage', ai.pocket_percentage,
           'amount', ai.amount,
           'created_at', ai.created_at
-        ) ORDER BY ai.created_at
-      ) as allocation_items
+        ) ORDER BY jsonb_build_object(
+          'id', ai.id,
+          'allocation_id', ai.allocation_id,
+          'pocket_id', ai.pocket_id,
+          'pocket_name', ai.pocket_name,
+          'pocket_percentage', ai.pocket_percentage,
+          'amount', ai.amount,
+          'created_at', ai.created_at
+        )
+      ) FILTER (WHERE ai.id IS NOT NULL) as allocation_items,
+      COALESCE(COUNT(DISTINCT ht.id), 0)::int as transaction_count,
+      COALESCE(SUM(ht.amount), 0)::numeric as total_allocated
     FROM public.allocations a
     LEFT JOIN public.allocation_items ai ON ai.allocation_id = a.id
+    LEFT JOIN public.holding_transactions ht ON ht.linked_allocation_id = a.id
     WHERE a.money_book_id = ${moneyBookId}
     GROUP BY a.id, a.money_book_id, a.source_amount, a.date, a.notes, a.created_at
     ORDER BY a.date DESC, a.created_at DESC

@@ -4,6 +4,7 @@ import { assetTypes } from '~/constants/investmentOptions'
 export const useInvestments = () => {
   const { success: showSuccess, error: showError } = useNotification()
   const { showDialog } = useConfirmDialog()
+  const { selectedBook } = useMoneyBooks() // ✅ Top level - called once
 
   // State
   const holdings = useState<Holding[]>('investment-holdings', () => [])
@@ -79,14 +80,17 @@ export const useInvestments = () => {
 
   // Load portfolio and holdings
   async function loadInvestments(bookId: string) {
-    // Check cache first - avoid API call if data exists
+    // ✅ Pattern: Cache-first with AbortController
+    // See docs/development/API_PATTERNS.md "Pattern 1: Cache-First with AbortController"
+    
+    // 1. Check cache first - prevents duplicate API calls (HMR, rapid switches)
     const cached = cache.value.get(bookId)
     if (cached) {
       holdings.value = cached
       return // ✅ High performance: no API call
     }
 
-    // Cancel previous request if exists
+    // 2. Cancel previous request if still pending (prevents stale data)
     if (abortController) {
       abortController.abort()
     }
@@ -133,7 +137,6 @@ export const useInvestments = () => {
     notes?: string
     linked_allocation_id?: string
   }) {
-    const { selectedBook } = useMoneyBooks()
     if (!selectedBook.value?.id) {
       showError('No money book selected')
       return
@@ -191,7 +194,6 @@ export const useInvestments = () => {
       }
       
       // Update cache
-      const { selectedBook } = useMoneyBooks()
       if (selectedBook.value?.id) {
         cache.value.set(selectedBook.value.id, [...holdings.value])
       }
@@ -214,7 +216,6 @@ export const useInvestments = () => {
       holdings.value = holdings.value.filter(h => h.id !== holdingId)
       
       // Update cache
-      const { selectedBook } = useMoneyBooks()
       if (selectedBook.value?.id) {
         cache.value.set(selectedBook.value.id, [...holdings.value])
       }

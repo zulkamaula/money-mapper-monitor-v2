@@ -35,6 +35,8 @@ export interface Allocation {
   notes?: string | null
   created_at: string
   allocation_items?: AllocationItem[]
+  transaction_count?: number
+  total_allocated?: number
 }
 
 export interface InvestmentPortfolio {

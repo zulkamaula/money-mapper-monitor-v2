@@ -11,11 +11,13 @@ const { success: showSuccess, error: showError } = useNotification()
 const { showDialog: showConfirmDialog } = useConfirmDialog()
 const { targetAllocationId, clearTarget } = useAllocationNavigation()
 
-// Reload when selected book changes
+// ✅ Pattern: Single watcher with immediate:true (acts as onMounted + watch)
+// See docs/development/API_PATTERNS.md "Pattern 1: Watcher Strategy"
 watch(() => selectedBook.value, async (newBook) => {
   if (newBook) {
     await loadAllocations()
     // Holdings are loaded automatically by useInvestments watcher
+    // No need to fetch transaction counts - embedded in allocations response (prevents N+1)
   }
 }, { immediate: true })
 
@@ -26,8 +28,6 @@ const showAllocationDialog = ref(false)
 const showHoldingDialog = ref(false)
 const selectedAllocationForHolding = ref<Allocation | null>(null)
 
-// Track allocation transaction totals
-const allocationTotals = ref<Record<string, { count: number; allocated: number }>>({})
 
 function toggleCardExpand() {
   isExpanded.value = !isExpanded.value
@@ -97,52 +97,29 @@ function handleAddInvestHolding(allocation: Allocation) {
   showHoldingDialog.value = true
 }
 
-// Refresh holdings after dialog closes
+// ✅ Pattern: Manual refetch for cross-concern updates
+// See docs/development/API_PATTERNS.md "Pattern 3: Manual Refetch for Cross-Concern Updates"
 watch(showHoldingDialog, async (isOpen) => {
   if (!isOpen && selectedBook.value) {
-    // Reload holdings to update remaining amounts
+    // Holding created → affects investments (update holdings list)
     await loadInvestments(selectedBook.value.id)
     
-    // Refetch allocation transactions to update remaining calculations
-    if (selectedAllocationForHolding.value) {
-      await fetchAllocationTransactions(selectedAllocationForHolding.value.id)
-    }
+    // Holding linked to allocation → affects allocation totals (update counts)
+    await loadAllocations()
     
     selectedAllocationForHolding.value = null
   }
 })
 
-// Fetch transaction totals for an allocation
-async function fetchAllocationTransactions(allocationId: string) {
-  try {
-    const data = await $fetch<{ transactions: any[]; summary: { total_count: number; total_allocated: number } }>(
-      `/api/allocations/${allocationId}/transactions`
-    )
-    allocationTotals.value[allocationId] = {
-      count: data.summary.total_count,
-      allocated: data.summary.total_allocated
-    }
-  } catch (error) {
-    console.error('Failed to fetch allocation transactions:', error)
-    allocationTotals.value[allocationId] = { count: 0, allocated: 0 }
-  }
-}
-
-// Load transactions when allocations change
-watch(() => allocations.value, async (newAllocations) => {
-  for (const allocation of newAllocations.slice(0, 10)) {
-    await fetchAllocationTransactions(allocation.id)
-  }
-}, { immediate: true, deep: true })
-
-// Calculate holdings count linked to an allocation
+// Calculate holdings count linked to an allocation (from embedded data)
 function getHoldingsForAllocation(allocationId: string) {
-  return allocationTotals.value[allocationId]?.count || 0
+  const allocation = allocations.value.find(a => a.id === allocationId)
+  return allocation?.transaction_count || 0
 }
 
-// Calculate remaining amount from allocation
+// Calculate remaining amount from allocation (from embedded data)
 function getRemainingAmount(allocation: Allocation) {
-  const totalAllocated = allocationTotals.value[allocation.id]?.allocated || 0
+  const totalAllocated = Number(allocation.total_allocated || 0)
   return Math.max(0, allocation.source_amount - totalAllocated)
 }
 
@@ -155,17 +132,9 @@ async function handleDelete(id: string) {
   const allocation = allocations.value.find(a => a.id === id)
   if (!allocation) return
 
-  // Check if there are holdings linked to this allocation
-  const linkedHoldingsCount = getHoldingsForAllocation(id)
-  const hasLinkedHoldings = linkedHoldingsCount > 0
-  
-  const warningMessage = hasLinkedHoldings
-    ? `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?\n\nThis will unlink ${linkedHoldingsCount} investment ${linkedHoldingsCount === 1 ? 'transaction' : 'transactions'}.`
-    : `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`
-
   await showConfirmDialog({
     title: 'Delete Allocation?',
-    message: warningMessage,
+    message: `This will also unlink ${getHoldingsForAllocation(id)} linked holding(s).`,
     icon: 'mdi-delete-alert',
     iconColor: 'error',
     confirmText: 'Delete',

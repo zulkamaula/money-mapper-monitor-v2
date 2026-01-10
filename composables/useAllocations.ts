@@ -113,12 +113,8 @@ export const useAllocations = () => {
         cache.value.set(selectedBook.value.id, [...allocations.value])
       }
       
-      // Reload holdings to sync with cascade-deleted holdings
-      if (selectedBook.value) {
-        const { loadInvestments, clearCache } = useInvestments()
-        clearCache(selectedBook.value.id) // Clear cache to force fresh fetch
-        await loadInvestments(selectedBook.value.id)
-      }
+      // Note: Component should handle cross-concern updates (holdings refresh)
+      // Composables should focus on single responsibility
       
       return true
     } catch (error) {

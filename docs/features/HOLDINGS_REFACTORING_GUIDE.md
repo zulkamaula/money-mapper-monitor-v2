@@ -334,15 +334,21 @@ After migration completes successfully:
 Update API endpoints to work with new schema:
 1. `server/api/holdings.post.ts` - Create transactions & merge
 2. `server/api/holdings.get.ts` - Return aggregated data
-3. Create new endpoints for transactions & budget sources
+3. ✅ **IMPORTANT:** Follow patterns in `API_PATTERNS.md` to prevent N+1 queries
 
 ### **Phase 2 (Part 3): Frontend Updates**
 Update components to display merged holdings:
 1. `components/InvestmentPortfolio.vue` - Show merged cards
 2. `components/HoldingDialog.vue` - Create transactions
 3. Create `components/HoldingHistoryDialog.vue` - Timeline view
+4. ✅ **IMPORTANT:** Use composable patterns from `API_PATTERNS.md`
 
 **Estimated timeline:** 2-3 days for full implementation
+
+### **📖 Required Reading**
+Before implementing Phase 2, review:
+- **[API Patterns](../development/API_PATTERNS.md)** - Backend aggregation patterns, composable conventions, watcher strategies
+- Prevents common pitfalls: N+1 queries, duplicate watchers, memory leaks
 
 ---
 

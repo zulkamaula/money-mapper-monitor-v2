@@ -85,6 +85,19 @@ pnpm dev
 
 Visit `http://localhost:3000`
 
+## 📚 Documentation
+
+Complete documentation is available in the [`docs/`](./docs/) folder:
+
+- **[API Patterns](./docs/development/API_PATTERNS.md)** - ⭐ Required reading for development
+- **[All Documentation](./docs/README.md)** - Complete documentation index
+
+### Quick Links
+- 🔧 Development guides → [`docs/development/`](./docs/development/)
+- ✨ Feature docs → [`docs/features/`](./docs/features/)
+- 🚀 Deployment guides → [`docs/deployment/`](./docs/deployment/)
+- ⚙️ Infrastructure → [`docs/infrastructure/`](./docs/infrastructure/)
+
 ## 📦 Project Structure
 
 ```

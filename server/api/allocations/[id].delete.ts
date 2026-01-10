@@ -22,13 +22,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 404, statusText: 'Allocation not found' })
   }
 
-  // Delete related holdings first (cascade delete)
-  await db`DELETE FROM public.holdings WHERE linked_allocation_id = ${allocationId}`
-  
-  // Delete allocation items
+  // Delete allocation items first
   await db`DELETE FROM public.allocation_items WHERE allocation_id = ${allocationId}`
   
-  // Delete allocation
+  // Update transactions: unlink from allocation (SET NULL due to ON DELETE SET NULL constraint)
+  // Note: holding_transactions.linked_allocation_id has FK with ON DELETE SET NULL
+  // This will automatically set linked_allocation_id to NULL when allocation is deleted
+  
+  // Delete allocation (transactions will be unlinked automatically)
   await db`DELETE FROM public.allocations WHERE id = ${allocationId}`
   
   return { success: true }
