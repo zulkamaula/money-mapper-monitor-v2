@@ -88,14 +88,15 @@ function getTransactionColor(type: string) {
 <template>
   <VDialog
     v-model="dialogValue"
-    max-width="800"
+    :max-width="800"
     scrollable
+    :fullscreen="$vuetify.display.xs"
   >
     <VCard>
       <VCardTitle class="pa-5 bg-primary text-white">
         <div class="d-flex align-center justify-space-between w-100">
           <div>
-            <div class="text-h6">Transaction History</div>
+            <div class="text-body-1 text-sm-h6">Transaction History</div>
             <div v-if="holding" class="text-caption mt-1 text-white text-opacity-80">
               {{ holding.instrument_name }} @ {{ holding.platform }}
             </div>
@@ -110,18 +111,18 @@ function getTransactionColor(type: string) {
       <div v-if="!loading && (transactions?.length || 0) > 0" class="px-4 py-2">
         <VCard variant="tonal" color="primary">
           <VCardText class="pa-4">
-            <VRow dense>
-              <VCol cols="12" md="4">
+            <VRow dense :no-gutters="$vuetify.display.xs">
+              <VCol cols="12" sm="4" class="d-flex flex-row flex-sm-column align-center align-sm-start justify-space-between">
                 <div class="text-caption text-medium-emphasis">Total Transactions</div>
-                <div class="text-h6">{{ summary.total_count }}</div>
+                <div class="text-body-2 text-sm-h6">{{ summary.total_count }}</div>
               </VCol>
-              <VCol cols="12" md="4">
+              <VCol cols="12" sm="4" class="d-flex flex-row flex-sm-column align-center align-sm-start justify-space-between">
                 <div class="text-caption text-medium-emphasis">Total Invested</div>
-                <div class="text-h6">{{ formatCurrency(summary.total_allocated) }}</div>
+                <div class="text-body-2 text-sm-h6">{{ formatCurrency(summary.total_allocated) }}</div>
               </VCol>
-              <VCol cols="12" md="4">
+              <VCol cols="12" sm="4" class="d-flex flex-row flex-sm-column align-center align-sm-start justify-space-between">
                 <div class="text-caption text-medium-emphasis">Total Quantity</div>
-                <div class="text-h6">{{ summary.total_quantity }} {{ holding?.asset_type === 'gold' ? 'gr' : 'units' }}</div>
+                <div class="text-body-2 text-sm-h6">{{ summary.total_quantity }} {{ holding?.asset_type === 'gold' ? 'gr' : 'units' }}</div>
               </VCol>
             </VRow>
           </VCardText>
@@ -131,8 +132,8 @@ function getTransactionColor(type: string) {
       <!-- Funding Sources Card -->
       <div v-if="!loading && summary.pocket_sources && summary.pocket_sources.length > 0" class="px-4 pt-0 pb-2">
         <VCard variant="outlined" color="grey-lighten-2">
-          <VCardText class="pa-3 d-flex align-stretch ga-2">
-            <div class="text-caption text-medium-emphasis">Funding Sources:</div>
+          <VCardText class="pa-1 pa-sm-3 d-flex align-stretch ga-2">
+            <div class="text-caption text-medium-emphasis text-no-wrap my-2 my-sm-0 ml-1 ml-sm-0">Funding Sources:</div>
             <div class="d-flex ga-2 overflow-x-auto align-center">
               <VChip
                 v-for="pocket in summary.pocket_sources"
@@ -173,41 +174,48 @@ function getTransactionColor(type: string) {
               </template>
 
               <VListItemTitle class="font-weight-semibold">
-                <div class="d-flex align-center ga-2 text-capitalize">
+                <div class="d-flex ga-2 text-capitalize">
                   <span class="text-primary">{{ transaction.transaction_type }}</span>
-                  <VChip size="x-small" color="primary" variant="outlined">
-                    {{ formatDate(transaction.purchase_date || transaction.created_at) }}
-                  </VChip>
+                  <span>
+                    <VChip size="x-small" color="primary" variant="outlined">
+                      {{ formatDate(transaction.purchase_date || transaction.created_at) }}
+                    </VChip>
+                  </span>
                 </div>
               </VListItemTitle>
 
               <VListItemSubtitle>
                 <div class="d-flex flex-column ga-1 mt-1">
-                  <div class="d-flex align-center ga-2">
-                    <VIcon icon="mdi-scale-balance" size="x-small" />
-                    <span>{{ formatCurrency(transaction.amount) }}<template v-if="transaction.quantity"> • {{ transaction.quantity }} {{ holding?.asset_type === 'gold' ? 'gr' : 'units' }}</template></span>
+                  <div class="d-flex flex-column flex-sm-row align-sm-center ga-2">
+                    <div class="d-flex align-center ga-2">
+                      <VIcon icon="mdi-scale-balance" size="x-small" />
+                      <span>{{ formatCurrency(transaction.amount) }}<template v-if="transaction.quantity"> • {{ transaction.quantity }} {{ holding?.asset_type === 'gold' ? 'gr' : 'units' }}</template></span>
+                    </div>
+                    <div v-if="transaction.average_price" class="d-flex align-center ga-2">
+                      <VIcon icon="mdi-approximately-equal" size="x-small" />
+                      <span>{{ formatCurrency(transaction.average_price) }}/{{ holding?.asset_type === 'gold' ? 'gr' : 'unit' }}</span>
+                    </div>
                   </div>
-                  <div v-if="transaction.average_price" class="d-flex align-center ga-2">
-                    <VIcon icon="mdi-approximately-equal" size="x-small" />
-                    <span>{{ formatCurrency(transaction.average_price) }}/{{ holding?.asset_type === 'gold' ? 'gr' : 'unit' }}</span>
-                  </div>
-                  <!-- Pocket Sources -->
-                  <div v-if="transaction.pocket_sources && transaction.pocket_sources.length > 0" class="d-flex align-center ga-1 mt-1 flex-wrap">
+                  <!-- Pocket Sources with horizontal scroll -->
+                  <div v-if="transaction.pocket_sources && transaction.pocket_sources.length > 0" class="d-flex align-center ga-2 mt-1">
                     <VIcon icon="mdi-wallet-outline" size="x-small" />
-                    <VChip
-                      v-for="source in transaction.pocket_sources"
-                      :key="source.pocket_id"
-                      size="x-small"
-                      color="primary"
-                      variant="tonal"
-                    >
-                      {{ source.pocket_name }}: {{ formatPercentage(source.percentage) }}
-                    </VChip>
+                    <div class="d-flex ga-1 overflow-x-auto">
+                      <VChip
+                        v-for="source in transaction.pocket_sources"
+                        :key="source.pocket_id"
+                        size="x-small"
+                        color="primary"
+                        variant="tonal"
+                        class="flex-shrink-0"
+                      >
+                        {{ source.pocket_name }}: {{ formatPercentage(source.percentage) }}
+                      </VChip>
+                    </div>
                   </div>
                 </div>
               </VListItemSubtitle>
 
-              <template #append>
+              <template #append v-if="!$vuetify.display.xs">
                 <div class="d-flex flex-column align-end ga-2">
                   <!-- Allocation Link -->
                   <VBtn
