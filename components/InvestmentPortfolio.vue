@@ -1,23 +1,56 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/format'
 import { extractInstrumentAlias } from '~/utils/instrumentAlias'
-import type { Holding } from '~/types/models'
+import type { Holding, HoldingBudgetSource } from '~/types/models'
 
-const { holdings, loading, holdingsByAsset, handleDeleteHolding } = useInvestments()
+const { holdings, loading, holdingsByAsset, handleDeleteHolding, fetchBudgetSources } = useInvestments()
 const { navigateToAllocation } = useAllocationNavigation()
 
 const showHoldingDialog = ref(false)
+const showHistoryDialog = ref(false)
 const editingHolding = ref<Holding | undefined>(undefined)
+const selectedHolding = ref<Holding | undefined>(undefined)
 const isExpanded = ref(false)
 const expandedNotes = ref<Record<string, boolean>>({})
+const budgetSources = ref<Record<string, HoldingBudgetSource[]>>({})
+const loadingBudgetSources = ref<Record<string, boolean>>({})
 
 function toggleNote(holdingId: string) {
   expandedNotes.value[holdingId] = !expandedNotes.value[holdingId]
 }
 
+// Fetch budget sources for a holding when expanded
+async function loadBudgetSources(holdingId: string) {
+  if (budgetSources.value[holdingId]) return // Already loaded
+  
+  loadingBudgetSources.value[holdingId] = true
+  const sources = await fetchBudgetSources(holdingId)
+  budgetSources.value[holdingId] = sources
+  loadingBudgetSources.value[holdingId] = false
+}
+
+// Toggle group and load budget sources for all holdings in that group
+async function toggleGroupAndLoadSources(assetType: string, groupHoldings: Holding[]) {
+  expandedGroups.value[assetType] = !expandedGroups.value[assetType]
+  
+  // Load budget sources when expanding
+  if (expandedGroups.value[assetType]) {
+    for (const holding of groupHoldings) {
+      if (holding.transaction_count > 0) {
+        await loadBudgetSources(holding.id)
+      }
+    }
+  }
+}
+
 function openEditDialog(holding: Holding) {
   editingHolding.value = holding
   showHoldingDialog.value = true
+}
+
+function openHistoryDialog(holding: Holding) {
+  selectedHolding.value = holding
+  showHistoryDialog.value = true
 }
 
 function toggleExpand() {
@@ -53,9 +86,6 @@ function getAssetIcon(type: string) {
 
 const expandedGroups = ref<Record<string, boolean>>({})
 
-function toggleGroup(assetType: string) {
-  expandedGroups.value[assetType] = !expandedGroups.value[assetType]
-}
 
 // Note: Profit calculations moved to Simulate dialog (Phase 3)
 // Holdings now show aggregated totals (total_investment, total_quantity, transaction_count)
@@ -123,7 +153,7 @@ function toggleGroup(assetType: string) {
           <div v-else>
             <VCard v-for="(group, assetType) in holdingsByAsset" :key="assetType" class="mb-4 group-card" elevation="0">
               <!-- Asset Group Header - Clickable -->
-              <VCardTitle class="pa-4 cursor-pointer user-select-none group-header" @click="toggleGroup(assetType)">
+              <VCardTitle class="pa-4 cursor-pointer user-select-none group-header" @click="toggleGroupAndLoadSources(assetType, group.holdings)">
                 <div class="d-flex align-center w-100">
                   <VIcon :icon="getAssetIcon(assetType)" size="20" color="primary" class="mr-2" />
                   <span class="text-subtitle-1 font-weight-bold">{{ group.name }}</span>
@@ -143,26 +173,38 @@ function toggleGroup(assetType: string) {
                       <VCard variant="outlined" color="primary" rounded="xl">
                         <VCardText class="pa-4 bg-white">
                           <!-- Platform & Actions -->
-                          <div class="d-flex align-center justify-space-between mb-2">
+                          <div class="d-flex justify-space-between align-center mb-2">
                             <VChip size="x-small" color="primary" variant="tonal">
                               {{ extractInstrumentAlias(holding.instrument_name) }}
                             </VChip>
-                            <VMenu>
-                              <template v-slot:activator="{ props }">
-                                <VBtn icon="mdi-dots-vertical" size="x-small" variant="text" v-bind="props" />
-                              </template>
-                              <VList density="compact">
-                                <VListItem @click="openEditDialog(holding)">
-                                  <VListItemTitle>Edit</VListItemTitle>
-                                </VListItem>
-                                <VDivider />
-                                <VListItem @click="handleDeleteHolding(holding)">
-                                  <VListItemTitle class="text-error font-weight-medium">
-                                    Delete
-                                  </VListItemTitle>
-                                </VListItem>
-                              </VList>
-                            </VMenu>
+                            <div class="d-flex align-center ga-1">
+                              <!-- View History Button -->
+                              <VBtn
+                                v-if="holding.transaction_count > 0"
+                                icon="mdi-history"
+                                size="x-small"
+                                variant="text"
+                                color="primary"
+                                @click="openHistoryDialog(holding)"
+                              />
+                              <!-- Menu -->
+                              <VMenu>
+                                <template v-slot:activator="{ props }">
+                                  <VBtn icon="mdi-dots-vertical" size="x-small" variant="text" v-bind="props" />
+                                </template>
+                                <VList density="compact">
+                                  <VListItem @click="openEditDialog(holding)">
+                                    <VListItemTitle>Edit</VListItemTitle>
+                                  </VListItem>
+                                  <VDivider />
+                                  <VListItem @click="handleDeleteHolding(holding)">
+                                    <VListItemTitle class="text-error font-weight-medium">
+                                      Delete
+                                    </VListItemTitle>
+                                  </VListItem>
+                                </VList>
+                              </VMenu>
+                            </div>
                           </div>
 
                           <!-- Platform -->
@@ -182,11 +224,33 @@ function toggleGroup(assetType: string) {
                             {{ formatCurrency(holding.total_investment) }}
                           </div>
 
+                          <!-- Budget Sources -->
+                          <div v-if="budgetSources[holding.id]?.length" class="mt-3 pt-3 border-t border-opacity-10">
+                            <div class="text-caption text-medium-emphasis mb-2">
+                              <VIcon icon="mdi-wallet-outline" size="x-small" class="mr-1" />
+                              Funded by:
+                            </div>
+                            <div class="d-flex flex-wrap ga-1">
+                              <VChip
+                                v-for="source in budgetSources[holding.id]"
+                                :key="source.pocket_id"
+                                size="x-small"
+                                color="primary"
+                                variant="tonal"
+                              >
+                                {{ source.pocket_name }}: {{ Math.round(source.accumulated_percentage) }}%
+                              </VChip>
+                            </div>
+                          </div>
+                          <div v-else-if="loadingBudgetSources[holding.id]" class="mt-3 pt-3 border-t border-opacity-10">
+                            <VSkeletonLoader type="chip" width="80" />
+                          </div>
+
                           <!-- Optional Info -->
                           <div v-if="holding.total_quantity" class="mt-3 pt-3 border-t border-opacity-10">
                             <div class="text-caption text-medium-emphasis">
                               <VIcon :icon="getAssetIcon(holding.asset_type as string)" size="x-small" class="mr-1" />
-                              {{ holding.total_quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
+                              {{ holding.total_quantity }} {{ holding.asset_type === 'gold' ? 'gr' : 'units' }}
                             </div>
                           </div>
                         </VCardText>
@@ -203,6 +267,9 @@ function toggleGroup(assetType: string) {
 
     <!-- Holding Dialog -->
     <HoldingDialog v-model="showHoldingDialog" :holding="editingHolding" />
+    
+    <!-- Transaction History Dialog -->
+    <HoldingHistoryDialog v-model="showHistoryDialog" :holding="selectedHolding" />
   </div>
 </template>
 

@@ -80,6 +80,12 @@ export interface HoldingTransaction {
   notes?: string
   linked_allocation_id?: string
   created_at: string
+  pocket_sources?: Array<{
+    pocket_id: string
+    pocket_name: string
+    pocket_amount: number
+    percentage: number
+  }>
 }
 
 export interface HoldingBudgetSource {

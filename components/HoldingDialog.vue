@@ -563,7 +563,7 @@ watch(() => props.modelValue, (newVal) => {
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
-                    :hint="calculatedQuantity > 0 ? `Quantity: ${formatQuantity(calculatedQuantity)} ${form.asset_type === 'gold' ? 'gram' : 'units'}` : 'Enter price to calculate quantity'"
+                    :hint="calculatedQuantity > 0 ? `Quantity: ${formatQuantity(calculatedQuantity)} ${form.asset_type === 'gold' ? 'gr' : 'units'}` : 'Enter price to calculate quantity'"
                     persistent-hint
                     @input="handleAveragePriceInput"
                   >

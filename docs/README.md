@@ -20,6 +20,7 @@ Core development patterns, guides, and best practices.
 | Document | Description |
 |----------|-------------|
 | [API Patterns](./development/API_PATTERNS.md) | **⭐ Required reading** - Backend/frontend patterns, composables, preventing N+1 queries |
+| [UI Conventions](./development/UI_CONVENTIONS.md) | **⭐ Required reading** - UI/UX patterns, Vuetify components, design guidelines |
 | [Migration Guide](./development/MIGRATION_GUIDE.md) | Database migration procedures and best practices |
 | [Security Fix](./development/SECURITY_FIX.md) | Security vulnerabilities and fixes applied |
 

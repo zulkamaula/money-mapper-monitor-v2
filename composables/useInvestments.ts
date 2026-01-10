@@ -1,4 +1,4 @@
-import type { Holding } from '~/types/models'
+import type { Holding, InvestmentPortfolio, HoldingBudgetSource, HoldingTransaction } from '~/types/models'
 import { assetTypes } from '~/constants/investmentOptions'
 
 export const useInvestments = () => {
@@ -269,6 +269,50 @@ export const useInvestments = () => {
     cache.value.delete(bookId)
   }
 
+  // Fetch budget sources for a holding
+  async function fetchBudgetSources(holdingId: string) {
+    try {
+      const sources = await $fetch<HoldingBudgetSource[]>(`/api/holdings/${holdingId}/budget-sources`)
+      return sources
+    } catch (error) {
+      console.error('Failed to fetch budget sources:', error)
+      return []
+    }
+  }
+
+  // Fetch transactions for a holding
+  async function fetchTransactions(holdingId: string) {
+    try {
+      const response = await $fetch<{ 
+        transactions: HoldingTransaction[]
+        summary: { 
+          total_count: number
+          total_allocated: number
+          total_quantity: number
+          pocket_sources: Array<{
+            pocket_name: string
+            pocket_amount: number
+            percentage: number
+          }>
+        }
+      }>(
+        `/api/holdings/${holdingId}/transactions`
+      )
+      return response
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error)
+      return { 
+        transactions: [], 
+        summary: { 
+          total_count: 0, 
+          total_allocated: 0,
+          total_quantity: 0,
+          pocket_sources: []
+        }
+      }
+    }
+  }
+
   return {
     // State
     holdings,
@@ -288,6 +332,8 @@ export const useInvestments = () => {
     handleDeleteHolding,
     saveSimulationResult,
     clearSimulationResult,
-    clearCache
+    clearCache,
+    fetchBudgetSources,
+    fetchTransactions
   }
 }

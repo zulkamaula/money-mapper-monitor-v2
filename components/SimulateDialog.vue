@@ -207,7 +207,7 @@ watch(() => props.modelValue, (newVal) => {
                     <span class="d-inline-flex align-center">
                       {{ formatCurrency(data.holding.initial_investment) }}
                       <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
-                      {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gram' : 'lot' }}
+                      {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gr' : 'lot' }}
                     </span>
                   </div>
                   <div v-if="data.holding.purchase_date" class="text-caption text-medium-emphasis">
