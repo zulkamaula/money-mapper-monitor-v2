@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 404, statusText: 'Money book not found' })
   }
 
-  // Get all holdings with asset info
+  // Get all holdings with asset info (aggregated structure)
   const holdings = await db`
     SELECT 
       h.id,
@@ -31,12 +31,9 @@ export default defineEventHandler(async (event) => {
       a.name as asset_name,
       h.platform,
       h.instrument_name,
-      h.initial_investment,
-      h.average_price,
-      h.quantity,
-      h.purchase_date,
-      h.notes,
-      h.linked_allocation_id,
+      h.total_investment,
+      h.total_quantity,
+      h.transaction_count,
       h.last_updated,
       h.created_at
     FROM public.holdings h

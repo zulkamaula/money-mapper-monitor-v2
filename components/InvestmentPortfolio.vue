@@ -58,7 +58,7 @@ function toggleGroup(assetType: string) {
 }
 
 // Note: Profit calculations moved to Simulate dialog (Phase 3)
-// Holdings only show initial_investment for now
+// Holdings now show aggregated totals (total_investment, total_quantity, transaction_count)
 </script>
 
 <template>
@@ -172,42 +172,21 @@ function toggleGroup(assetType: string) {
 
                           <!-- Values -->
                           <!-- Investment Info -->
-                          <div class="text-caption text-medium-emphasis mb-1">Invested</div>
+                          <div class="d-flex justify-space-between align-center mb-1">
+                            <div class="text-caption text-medium-emphasis">Total Invested</div>
+                            <VChip v-if="holding.transaction_count > 1" size="x-small" color="success" variant="tonal">
+                              {{ holding.transaction_count }} transactions
+                            </VChip>
+                          </div>
                           <div class="text-body-2 font-weight-medium mb-3">
-                            {{ formatCurrency(holding.initial_investment) }}
+                            {{ formatCurrency(holding.total_investment) }}
                           </div>
 
                           <!-- Optional Info -->
-                          <div v-if="holding.quantity || holding.notes || holding.linked_allocation_id" class="mt-3 pt-3 border-t border-opacity-10">
-                            <div v-if="holding.quantity" class="text-caption text-medium-emphasis">
+                          <div v-if="holding.total_quantity" class="mt-3 pt-3 border-t border-opacity-10">
+                            <div class="text-caption text-medium-emphasis">
                               <VIcon :icon="getAssetIcon(holding.asset_type as string)" size="x-small" class="mr-1" />
-                              {{ holding.quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
-                            </div>
-                            <div 
-                              v-if="holding.linked_allocation_id" 
-                              class="text-caption text-primary my-1 linked-budget-text"
-                              @click.stop="navigateToAllocation(holding.linked_allocation_id)"
-                            >
-                              <VIcon icon="mdi-link-variant" size="x-small" class="mr-1" />
-                              Linked to Budget
-                            </div>
-                            <div v-if="holding.notes" class="mt-1 d-flex flex-column">
-                              <div class="d-flex align-baseline font-italic">
-                                <VIcon icon="mdi-note-text-outline" size="x-small" class="mr-1 text-medium-emphasis" />
-                                <p 
-                                  class="text-caption text-medium-emphasis my-0"
-                                  :class="{ 'note-collapsed': !expandedNotes[holding.id] }"
-                                >
-                                  {{ holding.notes }}
-                                </p>
-                              </div>
-                              <span
-                                v-if="holding.notes.length > 20 && ($vuetify.display.mdAndUp || $vuetify.display.xs) || holding.notes.length > 19 && $vuetify.display.lg"
-                                class="align-self-end text-caption text-none d-inline-block underline text-info w-full"
-                                @click.stop="toggleNote(holding.id)"
-                              >
-                                {{ expandedNotes[holding.id] ? 'Show less' : 'See more' }}
-                              </span>
+                              {{ holding.total_quantity }} {{ holding.asset_type === 'gold' ? 'gram' : 'units' }}
                             </div>
                           </div>
                         </VCardText>

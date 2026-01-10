@@ -9,8 +9,9 @@ export default defineEventHandler(async (event) => {
     asset_name: string
     platform: string
     instrument_name: string
-    initial_investment: number
-    average_price: number
+    amount: number // transaction amount (was: initial_investment)
+    quantity: number // transaction quantity
+    average_price?: number // optional snapshot price
     purchase_date?: string
     notes?: string
     linked_allocation_id?: string
@@ -22,7 +23,8 @@ export default defineEventHandler(async (event) => {
     asset_name,
     platform, 
     instrument_name, 
-    initial_investment,
+    amount,
+    quantity,
     average_price,
     purchase_date,
     notes,
@@ -30,20 +32,17 @@ export default defineEventHandler(async (event) => {
   } = body
 
   if (!money_book_id || !asset_type || !asset_name || !platform || !instrument_name || 
-      initial_investment === undefined || average_price === undefined) {
+      amount === undefined || quantity === undefined) {
     throw createError({ status: 400, statusText: 'Missing required fields' })
   }
 
-  if (initial_investment < 0) {
+  if (amount < 0) {
     throw createError({ status: 400, statusText: 'Investment amount must be positive' })
   }
 
-  if (average_price <= 0) {
-    throw createError({ status: 400, statusText: 'Average price must be greater than 0' })
+  if (quantity <= 0) {
+    throw createError({ status: 400, statusText: 'Quantity must be greater than 0' })
   }
-
-  // Auto-calculate quantity from initial investment and average price
-  const quantity = initial_investment / average_price
 
   const db = sql()
   
@@ -106,27 +105,114 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 500, statusText: 'Failed to create asset' })
   }
 
-  // Create holding with asset info
-  const holding = await db`
-    INSERT INTO public.holdings (
-      id, asset_id, platform, instrument_name, 
-      initial_investment, average_price, quantity, 
-      purchase_date, notes, linked_allocation_id
-    )
-    VALUES (
-      uuid_generate_v4()::TEXT, ${assetId}, ${platform}, ${instrument_name},
-      ${initial_investment}, ${average_price}, ${quantity},
-      ${purchase_date || null}, ${notes || null}, ${linked_allocation_id || null}
-    )
-    RETURNING id, asset_id, platform, instrument_name, 
-              initial_investment, average_price, quantity,
-              purchase_date, notes, linked_allocation_id, last_updated, created_at
+  // Check if holding already exists (same instrument + platform)
+  const existingHolding = await db`
+    SELECT id, total_investment, total_quantity, transaction_count
+    FROM public.holdings
+    WHERE asset_id = ${assetId} 
+      AND platform = ${platform}
+      AND instrument_name = ${instrument_name}
   `
   
-  // Return holding with asset info for proper frontend grouping
+  let holdingId: string
+  let isNewHolding = false
+  
+  if (existingHolding.length > 0 && existingHolding[0]) {
+    // Holding exists → Update totals
+    holdingId = existingHolding[0].id
+    
+    await db`
+      UPDATE public.holdings
+      SET 
+        total_investment = total_investment + ${amount},
+        total_quantity = total_quantity + ${quantity},
+        transaction_count = transaction_count + 1,
+        last_updated = NOW()
+      WHERE id = ${holdingId}
+    `
+  } else {
+    // New holding → Create with initial values
+    isNewHolding = true
+    const newHolding = await db`
+      INSERT INTO public.holdings (
+        id, asset_id, platform, instrument_name, 
+        total_investment, total_quantity, transaction_count
+      )
+      VALUES (
+        uuid_generate_v4()::TEXT, ${assetId}, ${platform}, ${instrument_name},
+        ${amount}, ${quantity}, 1
+      )
+      RETURNING id
+    `
+    if (!newHolding[0]?.id) {
+      throw createError({ status: 500, statusText: 'Failed to create holding' })
+    }
+    holdingId = newHolding[0].id
+  }
+
+  // Create transaction record
+  const transaction = await db`
+    INSERT INTO public.holding_transactions (
+      id, holding_id, transaction_type, amount, quantity,
+      average_price, purchase_date, notes, linked_allocation_id
+    )
+    VALUES (
+      uuid_generate_v4()::TEXT, ${holdingId}, 'buy', ${amount}, ${quantity},
+      ${average_price || null}, ${purchase_date || null}, 
+      ${notes || null}, ${linked_allocation_id || null}
+    )
+    RETURNING id, created_at
+  `
+
+  // Update budget sources if linked to allocation
+  if (linked_allocation_id) {
+    // Get allocation items (pocket breakdown)
+    const allocationItems = await db`
+      SELECT pocket_id, pocket_name, pocket_percentage, amount as pocket_amount
+      FROM public.allocation_items
+      WHERE allocation_id = ${linked_allocation_id}
+    `
+    
+    // Upsert budget sources (aggregate by pocket_id)
+    for (const item of allocationItems) {
+      await db`
+        INSERT INTO public.holding_budget_sources (
+          id, holding_id, pocket_id, pocket_name,
+          accumulated_percentage, accumulated_amount, transaction_count
+        )
+        VALUES (
+          uuid_generate_v4()::TEXT, ${holdingId}, ${item.pocket_id}, ${item.pocket_name},
+          ${item.pocket_percentage}, ${item.pocket_amount}, 1
+        )
+        ON CONFLICT (holding_id, pocket_id)
+        DO UPDATE SET
+          accumulated_percentage = holding_budget_sources.accumulated_percentage + ${item.pocket_percentage},
+          accumulated_amount = holding_budget_sources.accumulated_amount + ${item.pocket_amount},
+          transaction_count = holding_budget_sources.transaction_count + 1,
+          last_updated = NOW()
+      `
+    }
+  }
+
+  // Return updated holding with asset info
+  const updatedHolding = await db`
+    SELECT 
+      h.id, h.asset_id, h.platform, h.instrument_name,
+      h.total_investment, h.total_quantity, h.transaction_count,
+      h.last_updated, h.created_at
+    FROM public.holdings h
+    WHERE h.id = ${holdingId}
+  `
+  
+  if (!updatedHolding[0] || !transaction[0]) {
+    throw createError({ status: 500, statusText: 'Failed to create/update holding' })
+  }
+  
   return {
-    ...holding[0],
+    ...updatedHolding[0],
     asset_type,
-    asset_name
+    asset_name,
+    transaction_id: transaction[0].id,
+    is_merged: !isNewHolding // true if this was added to existing holding
   }
 })

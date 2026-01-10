@@ -30,7 +30,7 @@ const form = ref({
   asset_name: '',
   platform: null as string | null,
   instrument_name: null as string | null,
-  initial_investment: 0,
+  amount: 0, // Changed from initial_investment
   average_price: undefined as number | undefined,
   quantity: 0,
   purchase_date: formatDateInput(null),
@@ -127,8 +127,8 @@ watch(() => form.value.linked_allocation_id, (newAllocationId) => {
   }
 })
 
-// Quantity is auto-calculated from initial_investment / average_price
-const initialDisplay = ref('')
+// Quantity is auto-calculated from amount / average_price
+const amountDisplay = ref('') // Changed from initialDisplay
 const averagePriceDisplay = ref('')
 const submitting = ref(false)
 const currentStep = ref(1)
@@ -152,16 +152,16 @@ const instrumentIcon = computed(() => {
 // Auto-calculated quantity (readonly)
 const calculatedQuantity = computed(() => {
   if (form.value.average_price && form.value.average_price > 0) {
-    return form.value.initial_investment / form.value.average_price
+    return form.value.amount / form.value.average_price
   }
   return 0
 })
 
-function handleInitialInput(event: Event) {
+function handleAmountInput(event: Event) {
   const input = event.target as HTMLInputElement
   const parsed = parseNumberInput(input.value)
-  form.value.initial_investment = parsed
-  initialDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  form.value.amount = parsed
+  amountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
 }
 
 
@@ -186,14 +186,14 @@ function resetForm() {
     asset_name: '',
     platform: null,
     instrument_name: null,
-    initial_investment: 0,
+    amount: 0,
     average_price: undefined,
     quantity: 0,
     purchase_date: formatDateInput(null),
     notes: '',
     linked_allocation_id: undefined
   }
-  initialDisplay.value = ''
+  amountDisplay.value = ''
   averagePriceDisplay.value = ''
   submitting.value = false
   currentStep.value = 1
@@ -228,7 +228,7 @@ const canProceedStep1 = computed(() => {
 const isFromAllocation = computed(() => !!props.allocationContext)
 
 const canProceedStep2 = computed(() => {
-  return form.value.initial_investment > 0 && form.value.average_price && form.value.average_price > 0
+  return form.value.amount > 0 && form.value.average_price && form.value.average_price > 0
 })
 
 // Auto-scroll stepper header on mobile
@@ -252,10 +252,13 @@ async function handleSubmit() {
   }
   
   if (!form.value.platform || !form.value.instrument_name ||
-      form.value.initial_investment <= 0 || !form.value.average_price || form.value.average_price <= 0) {
+      form.value.amount <= 0 || !form.value.average_price || form.value.average_price <= 0) {
     showError('Please fill all required fields')
     return
   }
+  
+  // Calculate quantity from amount and price
+  const quantity = form.value.amount / form.value.average_price
   
   // Auto-fill asset_name from asset_type (for database, but hidden from user)
   const assetTypeObj = assetTypes.find(at => at.value === form.value.asset_type)
@@ -267,8 +270,9 @@ async function handleSubmit() {
     asset_name: autoAssetName, // Auto-filled from asset_type
     platform: form.value.platform as string,
     instrument_name: form.value.instrument_name as string,
-    initial_investment: form.value.initial_investment,
-    average_price: form.value.average_price!, // Required - quantity will be auto-calculated
+    amount: form.value.amount, // New API field
+    quantity: quantity, // Calculated quantity
+    average_price: form.value.average_price, // Optional snapshot
     purchase_date: form.value.purchase_date,
     notes: form.value.notes,
     linked_allocation_id: form.value.linked_allocation_id
@@ -277,18 +281,24 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (isEditMode.value && props.holding) {
-      // Update mode - update all mutable financial fields
+      // Update mode - update totals manually (advanced use case)
       await updateHolding(props.holding.id, {
-        initial_investment: form.value.initial_investment,
-        average_price: form.value.average_price!,
-        purchase_date: form.value.purchase_date,
-        notes: form.value.notes
+        total_investment: form.value.amount,
+        total_quantity: quantity,
+        platform: form.value.platform as string,
+        instrument_name: form.value.instrument_name as string
       })
       showSuccess('Holding updated successfully')
     } else {
-      // Create mode - use submitData with finalAssetName
-      await createHolding(submitData)
-      showSuccess('Holding added successfully')
+      // Create mode - use submitData
+      const result = await createHolding(submitData)
+      
+      // Show appropriate success message based on merge status
+      if (result?.is_merged) {
+        showSuccess('Transaction added to existing holding')
+      } else {
+        showSuccess('New holding created successfully')
+      }
     }
     
     emit('save')
@@ -306,30 +316,30 @@ watch(() => props.modelValue, (newVal) => {
     if (props.allocationContext) {
       // Creating from allocation - pre-fill allocation data
       form.value.linked_allocation_id = props.allocationContext.id
-      form.value.initial_investment = props.allocationContext.source_amount
+      form.value.amount = props.allocationContext.source_amount
       form.value.purchase_date = formatDateInput(props.allocationContext.date)
-      initialDisplay.value = formatNumberInput(props.allocationContext.source_amount)
+      amountDisplay.value = formatNumberInput(props.allocationContext.source_amount)
       currentStep.value = 1
     } else if (props.holding) {
-      // Edit mode - populate form with holding data
-      const initialInvestment = Number(props.holding.initial_investment) || 0
-      const averagePrice = Number(props.holding.average_price) || 0
-      const quantityNum = Number(props.holding.quantity) || 0
+      // Edit mode - populate form with holding data (aggregated)
+      const totalInvestment = Number(props.holding.total_investment) || 0
+      const totalQuantity = Number(props.holding.total_quantity) || 0
+      const avgPrice = totalQuantity > 0 ? totalInvestment / totalQuantity : 0
       
       form.value = {
         asset_type: (props.holding as any).asset_type || 'gold',
         asset_name: (props.holding as any).asset_name || '',
         platform: props.holding.platform,
         instrument_name: props.holding.instrument_name,
-        initial_investment: initialInvestment,
-        average_price: averagePrice > 0 ? averagePrice : undefined,
-        quantity: quantityNum,
-        purchase_date: formatDateInput(props.holding.purchase_date),
-        notes: props.holding.notes || '',
-        linked_allocation_id: props.holding.linked_allocation_id || undefined
+        amount: totalInvestment,
+        average_price: avgPrice > 0 ? avgPrice : undefined,
+        quantity: totalQuantity,
+        purchase_date: formatDateInput(null), // No single date for aggregated holding
+        notes: '', // No single note for aggregated holding
+        linked_allocation_id: undefined // No single allocation for aggregated holding
       }
-      initialDisplay.value = formatNumberInput(initialInvestment)
-      averagePriceDisplay.value = averagePrice > 0 ? formatNumberInput(averagePrice) : ''
+      amountDisplay.value = formatNumberInput(totalInvestment)
+      averagePriceDisplay.value = avgPrice > 0 ? formatNumberInput(avgPrice) : ''
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -502,14 +512,14 @@ watch(() => props.modelValue, (newVal) => {
                 <!-- Row 1: Initial Investment | Purchase Date -->
                 <VCol cols="12" md="6">
                   <VTextField
-                    v-model="initialDisplay"
-                    label="Initial Investment"
+                    v-model="amountDisplay"
+                    label="Investment Amount"
                     placeholder="0"
                     variant="outlined"
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
-                    @input="handleInitialInput"
+                    @input="handleAmountInput"
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">

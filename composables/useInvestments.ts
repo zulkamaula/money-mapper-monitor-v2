@@ -120,14 +120,15 @@ export const useInvestments = () => {
     }
   }
 
-  // Create new holding
+  // Create new holding (transaction-based, auto-merges if exists)
   async function createHolding(data: {
     asset_type: 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other'
     asset_name: string
     platform: string
     instrument_name: string
-    initial_investment: number
-    average_price: number
+    amount: number // transaction amount
+    quantity: number // transaction quantity
+    average_price?: number // optional price snapshot
     purchase_date?: string
     notes?: string
     linked_allocation_id?: string
@@ -141,7 +142,7 @@ export const useInvestments = () => {
     const bookId = selectedBook.value.id
 
     try {
-      const newHolding = await $fetch<Holding>('/api/holdings', {
+      const response = await $fetch<Holding & { is_merged: boolean; transaction_id: string }>('/api/holdings', {
         method: 'POST',
         body: {
           money_book_id: bookId,
@@ -149,13 +150,21 @@ export const useInvestments = () => {
         }
       })
 
-      // Add asset info for display (from API response)
-      holdings.value.unshift(newHolding)
+      if (response.is_merged) {
+        // Update existing holding in list
+        const index = holdings.value.findIndex(h => h.id === response.id)
+        if (index !== -1) {
+          holdings.value[index] = response
+        }
+      } else {
+        // Add new holding to list
+        holdings.value.unshift(response)
+      }
       
       // Update cache
       cache.value.set(bookId, [...holdings.value])
       
-      return newHolding
+      return response
     } catch (error) {
       console.error('Failed to create holding:', error)
       showError('Failed to create holding')
@@ -163,12 +172,12 @@ export const useInvestments = () => {
     }
   }
 
-  // Update holding - update all mutable financial fields
+  // Update holding - manual adjustments to aggregated totals (advanced use case)
   async function updateHolding(holdingId: string, data: {
-    initial_investment?: number
-    average_price?: number
-    purchase_date?: string
-    notes?: string
+    total_investment?: number
+    total_quantity?: number
+    platform?: string
+    instrument_name?: string
   }) {
     try {
       const updated = await $fetch<Holding>(`/api/holdings/${holdingId}`, {

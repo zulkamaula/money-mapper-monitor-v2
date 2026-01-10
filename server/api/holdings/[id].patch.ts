@@ -5,24 +5,24 @@ export default defineEventHandler(async (event) => {
   const { userId } = requireAuth(event)
   const holdingId = getRouterParam(event, 'id')
   const body = await readBody<{ 
-    initial_investment?: number
-    average_price?: number
-    purchase_date?: string
-    notes?: string
+    total_investment?: number
+    total_quantity?: number
+    platform?: string
+    instrument_name?: string
   }>(event)
 
-  const { initial_investment, average_price, purchase_date, notes } = body
+  const { total_investment, total_quantity, platform, instrument_name } = body
 
   if (!holdingId) {
     throw createError({ status: 400, statusText: 'Missing required fields' })
   }
 
-  if (initial_investment !== undefined && initial_investment < 0) {
-    throw createError({ status: 400, statusText: 'Initial investment must be positive' })
+  if (total_investment !== undefined && total_investment < 0) {
+    throw createError({ status: 400, statusText: 'Total investment must be positive' })
   }
 
-  if (average_price !== undefined && average_price <= 0) {
-    throw createError({ status: 400, statusText: 'Average price must be greater than 0' })
+  if (total_quantity !== undefined && total_quantity <= 0) {
+    throw createError({ status: 400, statusText: 'Total quantity must be greater than 0' })
   }
 
   const db = sql()
@@ -41,40 +41,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ status: 404, statusText: 'Holding not found' })
   }
 
-  // If either initial_investment or average_price is being updated,
-  // we need to recalculate quantity
-  let quantityUpdate = null
-  if (initial_investment !== undefined || average_price !== undefined) {
-    // Get current values to calculate new quantity
-    const current = await db`
-      SELECT initial_investment, average_price FROM public.holdings
-      WHERE id = ${holdingId}
-    `
-    
-    if (current.length > 0 && current[0]) {
-      const newInitialInvestment = initial_investment !== undefined ? initial_investment : (current[0].initial_investment || 0)
-      const newAveragePrice = average_price !== undefined ? average_price : (current[0].average_price || 0)
-      
-      if (newAveragePrice && newAveragePrice > 0) {
-        quantityUpdate = newInitialInvestment / newAveragePrice
-      }
-    }
-  }
-
+  // Update holding (manual adjustments only - prefer creating transactions for normal flow)
   const updated = await db`
     UPDATE public.holdings
     SET 
-      initial_investment = COALESCE(${initial_investment !== undefined ? initial_investment : null}, initial_investment),
-      average_price = COALESCE(${average_price !== undefined ? average_price : null}, average_price),
-      quantity = COALESCE(${quantityUpdate !== null ? quantityUpdate : null}, quantity),
-      purchase_date = COALESCE(${purchase_date !== undefined ? purchase_date : null}, purchase_date),
-      notes = COALESCE(${notes !== undefined ? notes : null}, notes),
+      total_investment = COALESCE(${total_investment !== undefined ? total_investment : null}, total_investment),
+      total_quantity = COALESCE(${total_quantity !== undefined ? total_quantity : null}, total_quantity),
+      platform = COALESCE(${platform !== undefined ? platform : null}, platform),
+      instrument_name = COALESCE(${instrument_name !== undefined ? instrument_name : null}, instrument_name),
       last_updated = NOW()
     WHERE id = ${holdingId}
     RETURNING id, asset_id, platform, instrument_name,
-              initial_investment, average_price, quantity,
-              purchase_date, notes, linked_allocation_id, last_updated, created_at
+              total_investment, total_quantity, transaction_count,
+              last_updated, created_at
   `
+  
+  if (!updated[0]) {
+    throw createError({ status: 500, statusText: 'Failed to update holding' })
+  }
   
   return updated[0]
 })
