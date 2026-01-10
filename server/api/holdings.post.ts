@@ -173,24 +173,25 @@ export default defineEventHandler(async (event) => {
       WHERE allocation_id = ${linked_allocation_id}
     `
     
-    // Upsert budget sources (aggregate by pocket_id)
-    for (const item of allocationItems) {
-      await db`
+    // Batch upsert budget sources (more efficient than loop)
+    if (allocationItems.length > 0) {
+      const values = allocationItems.map(item => 
+        `(uuid_generate_v4()::TEXT, '${holdingId}', '${item.pocket_id}', '${item.pocket_name}', ${item.pocket_percentage}, ${item.pocket_amount}, 1)`
+      ).join(',')
+      
+      await db.unsafe(`
         INSERT INTO public.holding_budget_sources (
           id, holding_id, pocket_id, pocket_name,
           accumulated_percentage, accumulated_amount, transaction_count
         )
-        VALUES (
-          uuid_generate_v4()::TEXT, ${holdingId}, ${item.pocket_id}, ${item.pocket_name},
-          ${item.pocket_percentage}, ${item.pocket_amount}, 1
-        )
+        VALUES ${values}
         ON CONFLICT (holding_id, pocket_id)
         DO UPDATE SET
-          accumulated_percentage = holding_budget_sources.accumulated_percentage + ${item.pocket_percentage},
-          accumulated_amount = holding_budget_sources.accumulated_amount + ${item.pocket_amount},
+          accumulated_percentage = holding_budget_sources.accumulated_percentage + EXCLUDED.accumulated_percentage,
+          accumulated_amount = holding_budget_sources.accumulated_amount + EXCLUDED.accumulated_amount,
           transaction_count = holding_budget_sources.transaction_count + 1,
           last_updated = NOW()
-      `
+      `)
     }
   }
 

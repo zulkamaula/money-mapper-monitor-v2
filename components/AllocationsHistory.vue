@@ -26,6 +26,9 @@ const showAllocationDialog = ref(false)
 const showHoldingDialog = ref(false)
 const selectedAllocationForHolding = ref<Allocation | null>(null)
 
+// Track allocation transaction totals
+const allocationTotals = ref<Record<string, { count: number; allocated: number }>>({})
+
 function toggleCardExpand() {
   isExpanded.value = !isExpanded.value
 }
@@ -99,23 +102,48 @@ watch(showHoldingDialog, async (isOpen) => {
   if (!isOpen && selectedBook.value) {
     // Reload holdings to update remaining amounts
     await loadInvestments(selectedBook.value.id)
+    
+    // Refetch allocation transactions to update remaining calculations
+    if (selectedAllocationForHolding.value) {
+      await fetchAllocationTransactions(selectedAllocationForHolding.value.id)
+    }
+    
     selectedAllocationForHolding.value = null
   }
 })
 
-// Calculate holdings linked to an allocation
+// Fetch transaction totals for an allocation
+async function fetchAllocationTransactions(allocationId: string) {
+  try {
+    const data = await $fetch<{ transactions: any[]; summary: { total_count: number; total_allocated: number } }>(
+      `/api/allocations/${allocationId}/transactions`
+    )
+    allocationTotals.value[allocationId] = {
+      count: data.summary.total_count,
+      allocated: data.summary.total_allocated
+    }
+  } catch (error) {
+    console.error('Failed to fetch allocation transactions:', error)
+    allocationTotals.value[allocationId] = { count: 0, allocated: 0 }
+  }
+}
+
+// Load transactions when allocations change
+watch(() => allocations.value, async (newAllocations) => {
+  for (const allocation of newAllocations.slice(0, 10)) {
+    await fetchAllocationTransactions(allocation.id)
+  }
+}, { immediate: true, deep: true })
+
+// Calculate holdings count linked to an allocation
 function getHoldingsForAllocation(allocationId: string) {
-  return holdings.value.filter(h => h.linked_allocation_id === allocationId)
+  return allocationTotals.value[allocationId]?.count || 0
 }
 
 // Calculate remaining amount from allocation
 function getRemainingAmount(allocation: Allocation) {
-  const linkedHoldings = getHoldingsForAllocation(allocation.id)
-  const totalAllocated = linkedHoldings.reduce((sum, h) => {
-    const investment = Number(h.initial_investment) || 0
-    return sum + investment
-  }, 0)
-  return allocation.source_amount - totalAllocated
+  const totalAllocated = allocationTotals.value[allocation.id]?.allocated || 0
+  return Math.max(0, allocation.source_amount - totalAllocated)
 }
 
 // Check if allocation is fully distributed
@@ -128,11 +156,11 @@ async function handleDelete(id: string) {
   if (!allocation) return
 
   // Check if there are holdings linked to this allocation
-  const linkedHoldings = getHoldingsForAllocation(id)
-  const hasLinkedHoldings = linkedHoldings.length > 0
+  const linkedHoldingsCount = getHoldingsForAllocation(id)
+  const hasLinkedHoldings = linkedHoldingsCount > 0
   
   const warningMessage = hasLinkedHoldings
-    ? `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?\n\n This will also delete ${linkedHoldings.length} linked investment ${linkedHoldings.length === 1 ? 'holding' : 'holdings'}.`
+    ? `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?\n\nThis will unlink ${linkedHoldingsCount} investment ${linkedHoldingsCount === 1 ? 'transaction' : 'transactions'}.`
     : `Are you sure you want to delete this allocation of ${formatCurrency(allocation.source_amount)}?`
 
   await showConfirmDialog({
@@ -236,14 +264,15 @@ async function handleDelete(id: string) {
 
                   <!-- Investment Holdings Section -->
                   <div class="mt-3 pa-3 bg-white rounded">
-                    <div class="d-flex ga-2 flex-wrap flex-column flex-sm-row align-center justify-space-between mb-2">
+                    <!-- Show details only when NOT fully invested -->
+                    <div v-if="!isFullyAllocated(allocation)" class="d-flex ga-2 flex-wrap flex-column flex-sm-row align-center justify-space-between mb-2">
                       <div class="text-caption font-weight-semibold text-primary d-flex align-center ga-2">
                         <VIcon icon="mdi-chart-line" size="small" />
                         <span>
                           Invest Holdings
-                          <VChip v-if="getHoldingsForAllocation(allocation.id).length > 0" 
+                          <VChip v-if="getHoldingsForAllocation(allocation.id) > 0" 
                             size="x-small" color="primary" variant="tonal">
-                            {{ getHoldingsForAllocation(allocation.id).length }}
+                            {{ getHoldingsForAllocation(allocation.id) }}
                           </VChip>
                         </span>
                       </div>
@@ -251,18 +280,28 @@ async function handleDelete(id: string) {
                         Remaining: {{ formatCurrency(getRemainingAmount(allocation)) }}
                       </div>
                     </div>
+                    
+                    <!-- Button with conditional icon and badge -->
                     <VBtn 
-                      :disabled="isFullyAllocated(allocation)"
+                      :readonly="isFullyAllocated(allocation)"
                       color="primary" 
-                      variant="flat" 
+                      :variant="isFullyAllocated(allocation) ? 'text' : 'flat'" 
                       size="small" 
-                      prepend-icon="mdi-plus" 
+                      :prepend-icon="!isFullyAllocated(allocation) ? 'mdi-plus' : undefined"
                       class="text-none" 
                       block
                       rounded="pill"
                       @click.stop="handleAddInvestHolding(allocation)">
-                      <span v-if="isFullyAllocated(allocation)">Full Allocated</span>
-                      <span v-else>Add Invest Holding</span>
+                      <span>
+                        {{ isFullyAllocated(allocation) ? 'Fully Invested' : 'Add Invest Holding' }}
+                      </span>
+                      <VChip v-if="isFullyAllocated(allocation) && getHoldingsForAllocation(allocation.id) > 0" 
+                        size="x-small" 
+                        color="primary" 
+                        variant="flat"
+                        class="ml-2">
+                        {{ getHoldingsForAllocation(allocation.id) }}
+                      </VChip>
                     </VBtn>
                   </div>
 

@@ -334,12 +334,13 @@ watch(() => props.modelValue, (newVal) => {
         amount: totalInvestment,
         average_price: avgPrice > 0 ? avgPrice : undefined,
         quantity: totalQuantity,
-        purchase_date: formatDateInput(null), // No single date for aggregated holding
-        notes: '', // No single note for aggregated holding
-        linked_allocation_id: undefined // No single allocation for aggregated holding
+        purchase_date: formatDateInput(null),
+        notes: '',
+        linked_allocation_id: undefined
       }
       amountDisplay.value = formatNumberInput(totalInvestment)
       averagePriceDisplay.value = avgPrice > 0 ? formatNumberInput(avgPrice) : ''
+      currentStep.value = 1
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -562,8 +563,13 @@ watch(() => props.modelValue, (newVal) => {
                     prefix="Rp"
                     inputmode="numeric"
                     :disabled="submitting"
+                    :hint="calculatedQuantity > 0 ? `Quantity: ${formatQuantity(calculatedQuantity)} ${form.asset_type === 'gold' ? 'gram' : 'units'}` : 'Enter price to calculate quantity'"
+                    persistent-hint
                     @input="handleAveragePriceInput"
                   >
+                    <template v-slot:prepend-inner>
+                      <VIcon icon="mdi-calculator" size="small" class="text-medium-emphasis" />
+                    </template>
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
                         <template v-slot:activator="{ props }">
@@ -572,26 +578,10 @@ watch(() => props.modelValue, (newVal) => {
                         <VCard class="pa-3" style="max-width: 300px;">
                           <div class="text-caption font-weight-bold mb-1">Price per unit when purchased</div>
                           <div class="text-caption">
-                            For gold: price per gram. For stocks: price per share. Quantity will be auto-calculated.
+                            For gold: price per gram. For stocks: price per share. Quantity will be auto-calculated based on Amount ÷ Price.
                           </div>
                         </VCard>
                       </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-
-                <!-- Row 3: Quantity (auto-calculated, readonly) -->
-                <VCol cols="12" md="6">
-                  <VTextField
-                    :model-value="formatQuantity(calculatedQuantity)"
-                    label="Quantity (auto-calculated)"
-                    variant="outlined"
-                    readonly
-                    bg-color="grey-lighten-4"
-                    :suffix="form.asset_type === 'gold' ? 'gram' : 'units'"
-                  >
-                    <template v-slot:prepend-inner>
-                      <VIcon icon="mdi-calculator" size="small" class="text-medium-emphasis" />
                     </template>
                   </VTextField>
                 </VCol>
