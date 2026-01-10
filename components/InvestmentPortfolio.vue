@@ -178,25 +178,22 @@ const expandedGroups = ref<Record<string, boolean>>({})
                               {{ extractInstrumentAlias(holding.instrument_name) }}
                             </VChip>
                             <div class="d-flex align-center ga-1">
-                              <!-- View History Button -->
-                              <VBtn
-                                v-if="holding.transaction_count > 0"
-                                icon="mdi-history"
-                                size="x-small"
-                                variant="text"
-                                color="primary"
-                                @click="openHistoryDialog(holding)"
-                              />
                               <!-- Menu -->
-                              <VMenu>
+                              <VMenu location="bottom">
                                 <template v-slot:activator="{ props }">
                                   <VBtn icon="mdi-dots-vertical" size="x-small" variant="text" v-bind="props" />
                                 </template>
                                 <VList density="compact">
-                                  <VListItem @click="openEditDialog(holding)">
-                                    <VListItemTitle>Edit</VListItemTitle>
+                                  <VListItem
+                                    v-if="holding.transaction_count > 0"
+                                    @click="openHistoryDialog(holding)"
+                                  >
+                                    <VListItemTitle>History</VListItemTitle>
                                   </VListItem>
-                                  <VDivider />
+                                  <!-- <VListItem @click="openEditDialog(holding)" disabled>
+                                    <VListItemTitle>Edit</VListItemTitle>
+                                  </VListItem> -->
+                                  <VDivider v-if="holding.transaction_count > 0" />
                                   <VListItem @click="handleDeleteHolding(holding)">
                                     <VListItemTitle class="text-error font-weight-medium">
                                       Delete

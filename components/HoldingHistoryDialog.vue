@@ -96,8 +96,11 @@ function getTransactionColor(type: string) {
       <VCardTitle class="pa-5 bg-primary text-white">
         <div class="d-flex align-center justify-space-between w-100">
           <div>
-            <div class="text-body-1 text-sm-h6">Transaction History</div>
-            <div v-if="holding" class="text-caption mt-1 text-white text-opacity-80">
+            <div class="text-body-1 text-sm-h6 d-flex align-center ga-2">
+              <VIcon icon="mdi-history" size="small" />
+              Transaction History
+            </div>
+            <div v-if="holding" class="bg-white text-caption text-primary mt-1 rounded-pill px-2">
               {{ holding.instrument_name }} @ {{ holding.platform }}
             </div>
           </div>
