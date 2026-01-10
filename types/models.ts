@@ -60,12 +60,33 @@ export interface Holding {
   asset_name?: string
   platform: string
   instrument_name: string
-  initial_investment: number
-  average_price?: number
+  total_investment: number
+  total_quantity: number
+  transaction_count: number
+  last_updated: string
+  created_at: string
+}
+
+export interface HoldingTransaction {
+  id: string
+  holding_id: string
+  transaction_type: 'buy' | 'sell' | 'dividend' | 'fee' | 'adjustment'
+  amount: number
   quantity: number
+  average_price?: number
   purchase_date?: string
   notes?: string
   linked_allocation_id?: string
-  last_updated: string
   created_at: string
+}
+
+export interface HoldingBudgetSource {
+  id: string
+  holding_id: string
+  pocket_id: string
+  pocket_name: string
+  accumulated_percentage: number
+  accumulated_amount: number
+  transaction_count: number
+  last_updated: string
 }

@@ -28,13 +28,13 @@ export const useInvestments = () => {
   const totalInvested = computed(() => {
     if (!holdings.value || holdings.value.length === 0) return 0
     return holdings.value.reduce((sum, h) => {
-      const value = Number(h.initial_investment) || 0
+      const value = Number(h.total_investment) || 0
       return sum + value
     }, 0)
   })
 
   // Note: current_value, totalProfit, profitPercentage are now calculated in Simulate dialog
-  // Holdings only track initial_investment and quantity
+  // Holdings now track aggregated total_investment and total_quantity
 
   // Group holdings by asset_type
   const holdingsByAsset = computed(() => {
@@ -55,7 +55,7 @@ export const useInvestments = () => {
     return grouped
   })
 
-  // Asset allocation data for chart (based on initial_investment)
+  // Asset allocation data for chart (based on total_investment)
   const assetAllocationData = computed(() => {
     const allocation: Record<string, { name: string; value: number }> = {}
     
@@ -69,8 +69,8 @@ export const useInvestments = () => {
           value: 0 
         }
       }
-      // Ensure initial_investment is a number to avoid NaN
-      const investment = Number(holding.initial_investment) || 0
+      // Ensure total_investment is a number to avoid NaN
+      const investment = Number(holding.total_investment) || 0
       allocation[type].value += investment
     })
     
