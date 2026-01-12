@@ -19,13 +19,6 @@ const { holdings } = useInvestments()
         </VCol>
       </VRow>
 
-      <!-- Investment Portfolio Summary (Full Width) - Only show when holdings exist -->
-      <VRow v-if="selectedBook && holdings.length > 0" class="mb-6">
-        <VCol cols="12">
-          <LazyPortfolioSummaryCard />
-        </VCol>
-      </VRow>
-
       <!-- Main Content: 3 Equal Columns -->
       <VRow v-if="selectedBook" class="dashboard-content-row">
         <!-- Pockets Manager (1/3) -->
@@ -53,6 +46,13 @@ const { holdings } = useInvestments()
           class="dashboard-col"
         >
           <LazyInvestmentPortfolio />
+        </VCol>
+      </VRow>
+
+      <!-- Investment Portfolio Summary (Full Width) - Only show when holdings exist -->
+      <VRow v-if="selectedBook && holdings.length > 0" class="mt-6">
+        <VCol cols="12">
+          <LazyPortfolioSummaryCard />
         </VCol>
       </VRow>
     </VContainer>

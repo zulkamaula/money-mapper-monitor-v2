@@ -178,14 +178,6 @@ watch(() => props.modelValue, (newVal) => {
       <VDivider />
 
       <VCardText class="pa-4 pa-sm-6">
-        <VAlert type="info" variant="tonal" border="start" class="mb-6">
-          <template #text>
-            <div class="text-caption">
-              Enter purchase price and current market price for each holding. Profit/loss calculations are not saved to the database.
-            </div>
-          </template>
-        </VAlert>
-
         <!-- Holdings List -->
         <div v-if="holdings.length === 0" class="text-center py-8">
           <VIcon icon="mdi-inbox" size="64" color="grey" />
@@ -206,12 +198,6 @@ watch(() => props.modelValue, (newVal) => {
                   <div class="text-subtitle-2 text-sm-subtitle-1 font-weight-semibold">{{ data.holding.instrument_name }}</div>
                   <div class="text-caption text-medium-emphasis d-flex flex-wrap align-center ga-1">
                     <span>{{ data.holding.platform }}</span>
-                    <span>•</span>
-                    <span class="d-inline-flex align-center">
-                      {{ formatCurrency(data.holding.total_investment) }}
-                      <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
-                      {{ data.holding.total_quantity }} {{ data.holding.asset_type === 'gold' ? 'gr' : 'units' }}
-                    </span>
                   </div>
                 </div>
                 <VChip 
@@ -219,109 +205,103 @@ watch(() => props.modelValue, (newVal) => {
                   :color="getProfitColor(data.profit)" 
                   size="small" 
                   variant="flat"
-                  class="mr-1"
+                  class="mr-1 d-none d-sm-inline-flex"
                 >
                   {{ data.profit >= 0 ? '+' : '' }}{{ data.profitPercentage.toFixed(2) }}%
                 </VChip>
                 <VIcon :icon="expandedCards[data.holding.id] ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" />
               </div>
+              <VChip 
+                v-if="data.profit !== 0"
+                :color="getProfitColor(data.profit)" 
+                size="x-small" 
+                variant="flat"
+                class="mr-1 d-inline-flex d-sm-none"
+              >
+                {{ data.profit >= 0 ? '+' : '' }}{{ data.profitPercentage.toFixed(2) }}%
+              </VChip>
             </VCardTitle>
 
             <!-- Expandable Content -->
             <Transition name="expand">
-              <VCardText v-show="expandedCards[data.holding.id]" class="pa-3 pa-sm-4">
-                <!-- Current Value & Profit Display -->
-              <VAlert 
-                v-if="data.purchasePrice > 0 && data.currentPrice > 0"
-                :color="getProfitColor(data.profit)" 
-                variant="tonal" 
-                density="compact"
-                class="mb-3"
-              >
-                <div class="d-flex flex-column gap-2">
-                  <div class="d-flex justify-space-between align-center">
-                    <span class="text-caption font-weight-medium">
-                      <VIcon icon="mdi-chart-line" size="small" class="mr-1" />
-                      Current Value
-                    </span>
-                    <span class="text-body-2 font-weight-bold">
-                      {{ formatCurrency(data.calculatedCurrentValue) }}
-                    </span>
-                  </div>
-                  <VDivider />
-                  <div class="d-flex justify-space-between align-center">
-                    <span class="text-caption font-weight-medium">
-                      <VIcon :icon="data.profit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" size="small" class="mr-1" />
-                      Profit/Loss
-                    </span>
-                    <span class="text-body-2 font-weight-bold">
-                      {{ data.profit >= 0 ? '+' : '' }}{{ formatCurrency(data.profit) }}
-                    </span>
-                  </div>
-                </div>
-              </VAlert>
+              <VCardText v-show="expandedCards[data.holding.id]" class="pa-3 pa-sm-4 d-flex flex-column flex-sm-row align-stretch align-sm-center ga-4">
+                <!-- Info Alert -->
+                <VAlert type="info" variant="tonal" border="start" density="compact">
+                  <template #text>
+                    <div class="text-caption">
+                      Purchase price (/units)
+                    </div>
+                    <div class="d-flex flex-wrap align-center text-body-2 text-sm-body-1 font-weight-semibold">
+                      <div>
+                        {{ formatCurrency(data.holding.total_investment) }}
+                      </div>
+                      <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
+                      <div>
+                        {{ data.holding.total_quantity }} {{ data.holding.asset_type === 'gold' ? 'gr' : 'units' }}
+                      </div>
+                    </div>
+                  </template>
+                </VAlert>
 
-              <!-- Price Inputs -->
-              <VRow class="mt-2" dense>
-                <VCol cols="12" sm="6">
-                  <VTextField
-                    :model-value="data.purchasePriceDisplay"
-                    label="Purchase Price (per unit)"
-                    variant="outlined"
-                    density="compact"
-                    placeholder="e.g., 1000000"
-                    inputmode="numeric"
-                    readonly
-                    @input="handlePurchasePriceInput(index, $event)"
-                  >
-                    <template #prepend-inner>
-                      <span class="text-caption text-medium-emphasis">Rp</span>
-                    </template>
-                    <template #append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template #activator="{ props }">
-                          <VIcon icon="mdi-help-circle-outline" size="small" v-bind="props" color="grey" />
-                        </template>
-                        <VCard max-width="300" class="pa-3">
-                          <div class="text-caption">
-                            <div class="font-weight-semibold mb-1">Purchase Price per Unit</div>
-                            <div class="text-medium-emphasis">Price per unit when you first purchased this asset. This helps calculate your profit/loss.</div>
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-                <VCol cols="12" sm="6">
-                  <VTextField
-                    :model-value="data.currentPriceDisplay"
-                    label="Current Market Price (per unit)"
-                    variant="outlined"
-                    density="compact"
-                    placeholder="e.g., 1200000"
-                    inputmode="numeric"
-                    @input="handleCurrentPriceInput(index, $event)"
-                  >
-                    <template #prepend-inner>
-                      <span class="text-caption text-medium-emphasis">Rp</span>
-                    </template>
-                    <template #append-inner>
-                      <VMenu location="top" :close-on-content-click="false">
-                        <template #activator="{ props }">
-                          <VIcon icon="mdi-help-circle-outline" size="small" v-bind="props" color="grey" />
-                        </template>
-                        <VCard max-width="300" class="pa-3">
-                          <div class="text-caption">
-                            <div class="font-weight-semibold mb-1">Current Market Price per Unit</div>
-                            <div class="text-medium-emphasis">Enter the current market price per unit. The system will calculate your total current value and profit.</div>
-                            <div class="mt-2 text-medium-emphasis">Example: If gold is now Rp 1,200,000/gram, enter 1200000</div>
-                          </div>
-                        </VCard>
-                      </VMenu>
-                    </template>
-                  </VTextField>
-                </VCol>
-              </VRow>
+                <!-- Price Input -->
+                <VTextField
+                  :model-value="data.currentPriceDisplay"
+                  label="Current Market Price (per unit)"
+                  variant="outlined"
+                  density="compact"
+                  placeholder="e.g., 1200000"
+                  inputmode="numeric"
+                  hide-details
+                  @input="handleCurrentPriceInput(index, $event)"
+                >
+                  <template #prepend-inner>
+                    <span class="text-caption text-medium-emphasis">Rp</span>
+                  </template>
+                  <template #append-inner>
+                    <VMenu location="top" :close-on-content-click="false">
+                      <template #activator="{ props }">
+                        <VIcon icon="mdi-help-circle-outline" size="small" v-bind="props" color="grey" />
+                      </template>
+                      <VCard max-width="300" class="pa-3">
+                        <div class="text-caption">
+                          <div class="font-weight-semibold mb-1">Current Market Price per Unit</div>
+                          <div class="text-medium-emphasis">Enter the current market price per unit. The system will calculate your total current value and profit.</div>
+                          <div class="mt-2 text-medium-emphasis">Example: If gold is now Rp 1,200,000/gram, enter 1200000</div>
+                        </div>
+                      </VCard>
+                    </VMenu>
+                  </template>
+                </VTextField>
+
+                  <!-- Current Value & Profit Display -->
+                <VAlert 
+                  v-if="data.purchasePrice > 0 && data.currentPrice > 0"
+                  :color="getProfitColor(data.profit)" 
+                  variant="tonal" 
+                  density="compact"
+                >
+                  <div class="d-flex flex-column gap-2">
+                    <div class="d-flex justify-space-between align-center">
+                      <span class="text-caption font-weight-medium">
+                        <VIcon icon="mdi-chart-line" size="small" class="mr-1" />
+                        Current Value
+                      </span>
+                      <span class="text-body-2 font-weight-bold">
+                        {{ formatCurrency(data.calculatedCurrentValue) }}
+                      </span>
+                    </div>
+                    <VDivider />
+                    <div class="d-flex justify-space-between align-center">
+                      <span class="text-caption font-weight-medium">
+                        <VIcon :icon="data.profit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'" size="small" class="mr-1" />
+                        Profit/Loss
+                      </span>
+                      <span class="text-body-2 font-weight-bold">
+                        {{ data.profit >= 0 ? '+' : '' }}{{ formatCurrency(data.profit) }}
+                      </span>
+                    </div>
+                  </div>
+                </VAlert>
               </VCardText>
             </Transition>
           </VCard>
