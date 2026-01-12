@@ -10,7 +10,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { holdings, loading, saveSimulationResult } = useInvestments()
+const { holdings } = useInvestments()
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -32,7 +32,10 @@ const simulationData = ref<SimulationData[]>([])
 
 function initializeSimulation() {
   simulationData.value = holdings.value.map(holding => {
-    const avgPrice = Number(holding.average_price) || 0
+    // Calculate average price from total_investment / total_quantity
+    const avgPrice = holding.total_quantity > 0 
+      ? Number(holding.total_investment) / holding.total_quantity 
+      : 0
     return {
       holding,
       purchasePrice: avgPrice,
@@ -90,8 +93,8 @@ function calculateValues(index: number) {
   const data = simulationData.value[index]
   if (!data) return
   
-  const quantity = data.holding.quantity || 0
-  const initialInvestment = Number(data.holding.initial_investment) || 0
+  const quantity = data.holding.total_quantity || 0
+  const initialInvestment = Number(data.holding.total_investment) || 0
   
   // Calculate current value: quantity × current price
   data.calculatedCurrentValue = quantity * data.currentPrice
@@ -108,7 +111,7 @@ function calculateValues(index: number) {
 }
 
 const totalInitialInvestment = computed(() => {
-  return holdings.value.reduce((sum, h) => sum + (Number(h.initial_investment) || 0), 0)
+  return holdings.value.reduce((sum, h) => sum + (Number(h.total_investment) || 0), 0)
 })
 
 const totalCurrentValue = computed(() => {
@@ -198,21 +201,17 @@ watch(() => props.modelValue, (newVal) => {
             <!-- Holding Header (Clickable) -->
             <VCardTitle class="pa-3 pa-sm-4 cursor-pointer group-header" @click="toggleCard(data.holding.id)">
               <div class="d-flex align-center flex-wrap flex-sm-nowrap ga-2">
-                <VIcon :icon="getAssetIcon((data.holding as any).asset_type)" size="large" color="primary" class="mr-2" />
+                <VIcon :icon="getAssetIcon(data.holding.asset_type || 'other')" size="large" color="primary" class="mr-2" />
                 <div class="flex-grow-1">
                   <div class="text-subtitle-2 text-sm-subtitle-1 font-weight-semibold">{{ data.holding.instrument_name }}</div>
                   <div class="text-caption text-medium-emphasis d-flex flex-wrap align-center ga-1">
                     <span>{{ data.holding.platform }}</span>
                     <span>•</span>
                     <span class="d-inline-flex align-center">
-                      {{ formatCurrency(data.holding.initial_investment) }}
+                      {{ formatCurrency(data.holding.total_investment) }}
                       <VIcon icon="mdi-approximately-equal" size="x-small" class="mx-1" />
-                      {{ data.holding.quantity }} {{ (data.holding as any).asset_type === 'gold' ? 'gr' : 'lot' }}
+                      {{ data.holding.total_quantity }} {{ data.holding.asset_type === 'gold' ? 'gr' : 'units' }}
                     </span>
-                  </div>
-                  <div v-if="data.holding.purchase_date" class="text-caption text-medium-emphasis">
-                    <VIcon icon="mdi-calendar" size="x-small" class="mr-1" />
-                    {{ new Date(data.holding.purchase_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
                   </div>
                 </div>
                 <VChip 

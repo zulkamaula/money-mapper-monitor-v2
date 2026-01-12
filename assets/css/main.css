@@ -13,3 +13,8 @@ body {
   padding: 0;
   line-height: 1 !important;
 }
+
+.text-caption-2 {
+  font-size: 0.75rem !important;
+  line-height: .95rem;
+}

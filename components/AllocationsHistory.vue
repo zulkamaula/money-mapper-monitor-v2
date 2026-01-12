@@ -211,14 +211,14 @@ async function handleDelete(id: string) {
                   <VDivider class="my-3" />
                   <div class="d-flex flex-column ga-3">
                     <div v-for="item in allocation.allocation_items" :key="item.id" 
-                      class="d-flex flex-wrap justify-space-between align-center ga-2 pa-3 bg-white rounded">
+                      class="d-flex flex-column flex-sm-row ga-0 ga-sm-2 justify-space-between align-start align-sm-center ga-0 ga-sm-2 pa-3 bg-white rounded">
                       <div class="d-flex align-baseline ga-1 ga-sm-2">
                         <VChip size="x-small" color="primary" variant="tonal">
                           {{ formatPercentage(item.pocket_percentage) }}
                         </VChip>
-                        <div class="text-caption text-sm-body-2 font-weight-medium text-primary text-wrap w-100 w-sm-auto" style="line-height: .9rem;">{{ item.pocket_name }}</div>
+                        <div class="text-caption-2 text-sm-body-2 font-weight-medium text-primary text-wrap w-100 w-sm-auto">{{ item.pocket_name }}</div>
                       </div>
-                      <div class="d-flex align-center justify-space-between justify-sm-end flex-grow-1 ga-2">
+                      <div class="d-flex align-center justify-space-between justify-sm-end flex-grow-1 ga-2 w-100 w-sm-auto">
                         <div class="text-body-2 font-weight-semibold text-primary">{{ formatCurrency(item.amount) }}</div>
                         <VBtn :icon="copiedAmount === item.id ? 'mdi-check' : 'mdi-content-copy'" size="x-small"
                           variant="text" :color="copiedAmount === item.id ? 'success' : 'grey'"
@@ -252,7 +252,7 @@ async function handleDelete(id: string) {
                     
                     <!-- Button with conditional icon and badge -->
                     <VBtn 
-                      :readonly="isFullyAllocated(allocation)"
+                      :disabled="isFullyAllocated(allocation)"
                       color="primary" 
                       :variant="isFullyAllocated(allocation) ? 'text' : 'flat'" 
                       size="small" 
