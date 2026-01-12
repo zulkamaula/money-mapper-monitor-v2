@@ -313,6 +313,41 @@ export const useInvestments = () => {
     }
   }
 
+  // Update a transaction
+  async function updateTransaction(transactionId: string, data: {
+    amount?: number
+    quantity?: number
+    average_price?: number
+    purchase_date?: string
+    notes?: string
+  }) {
+    try {
+      const updated = await $fetch<HoldingTransaction>(
+        `/api/holdings/transactions/${transactionId}`,
+        {
+          method: 'PATCH',
+          body: data
+        }
+      )
+      return updated
+    } catch (error) {
+      console.error('Failed to update transaction:', error)
+      throw error
+    }
+  }
+
+  // Delete a transaction
+  async function deleteTransaction(transactionId: string) {
+    try {
+      await $fetch(`/api/holdings/transactions/${transactionId}`, {
+        method: 'DELETE' as any
+      })
+    } catch (error) {
+      console.error('Failed to delete transaction:', error)
+      throw error
+    }
+  }
+
   return {
     // State
     holdings,
@@ -334,6 +369,8 @@ export const useInvestments = () => {
     clearSimulationResult,
     clearCache,
     fetchBudgetSources,
-    fetchTransactions
+    fetchTransactions,
+    updateTransaction,
+    deleteTransaction
   }
 }

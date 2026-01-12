@@ -6,9 +6,7 @@ import type { Holding, HoldingBudgetSource } from '~/types/models'
 const { holdings, loading, holdingsByAsset, handleDeleteHolding, fetchBudgetSources } = useInvestments()
 const { navigateToAllocation } = useAllocationNavigation()
 
-const showHoldingDialog = ref(false)
 const showHistoryDialog = ref(false)
-const editingHolding = ref<Holding | undefined>(undefined)
 const selectedHolding = ref<Holding | undefined>(undefined)
 const isExpanded = ref(false)
 const expandedNotes = ref<Record<string, boolean>>({})
@@ -41,11 +39,6 @@ async function toggleGroupAndLoadSources(assetType: string, groupHoldings: Holdi
       }
     }
   }
-}
-
-function openEditDialog(holding: Holding) {
-  editingHolding.value = holding
-  showHoldingDialog.value = true
 }
 
 function openHistoryDialog(holding: Holding) {
@@ -140,7 +133,7 @@ const expandedGroups = ref<Record<string, boolean>>({})
           <div v-else-if="holdings.length === 0" class="text-center py-12">
             <VIcon icon="mdi-briefcase-off-outline" size="48" color="grey-lighten-1" class="mb-4" />
             <p class="text-h6 text-medium-emphasis mb-2">No Holdings Yet</p>
-            <VAlert type="info" variant="tonal" class="mx-auto" border="start" prominent title="Allocation-first workflow" style="max-width: 500px;">
+            <VAlert type="info" variant="tonal" class="mx-auto text-left" border="start" title="Allocation-first workflow" style="max-width: 500px;">
               <template #text>
                 <div class="text-caption text-left">
                   Holdings can only be created from allocation cards
@@ -190,9 +183,6 @@ const expandedGroups = ref<Record<string, boolean>>({})
                                   >
                                     <VListItemTitle>History</VListItemTitle>
                                   </VListItem>
-                                  <!-- <VListItem @click="openEditDialog(holding)" disabled>
-                                    <VListItemTitle>Edit</VListItemTitle>
-                                  </VListItem> -->
                                   <VDivider v-if="holding.transaction_count > 0" />
                                   <VListItem @click="handleDeleteHolding(holding)">
                                     <VListItemTitle class="text-error font-weight-medium">
@@ -262,9 +252,6 @@ const expandedGroups = ref<Record<string, boolean>>({})
       </Transition>
     </VCard>
 
-    <!-- Holding Dialog -->
-    <HoldingDialog v-model="showHoldingDialog" :holding="editingHolding" />
-    
     <!-- Transaction History Dialog -->
     <HoldingHistoryDialog v-model="showHistoryDialog" :holding="selectedHolding" />
   </div>

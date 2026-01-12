@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatCurrency, formatDate, formatPercentage } from '~/utils/format'
 import type { Holding, HoldingTransaction } from '~/types/models'
+import TransactionEditDialog from './TransactionEditDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -11,8 +12,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { fetchTransactions } = useInvestments()
+const { fetchTransactions, deleteTransaction } = useInvestments()
 const { navigateToAllocation } = useAllocationNavigation()
+const { showDialog } = useConfirmDialog()
 
 const transactions = ref<HoldingTransaction[]>([])
 const loading = ref(false)
@@ -22,6 +24,10 @@ const summary = ref({
   total_quantity: 0,
   pocket_sources: [] as Array<{ pocket_name: string, pocket_amount: number, percentage: number }>
 })
+
+// Edit transaction state
+const showEditDialog = ref(false)
+const selectedTransaction = ref<HoldingTransaction | undefined>()
 
 const dialogValue = computed({
   get: () => props.modelValue,
@@ -60,6 +66,35 @@ async function loadTransactions() {
 function handleAllocationClick(allocationId: string) {
   navigateToAllocation(allocationId)
   dialogValue.value = false
+}
+
+function openEditTransaction(transaction: HoldingTransaction) {
+  selectedTransaction.value = transaction
+  showEditDialog.value = true
+}
+
+async function handleDeleteTransaction(transaction: HoldingTransaction) {
+  const confirmed = await showDialog({
+    title: 'Delete Transaction',
+    message: `Are you sure you want to delete this ${transaction.transaction_type} transaction of ${formatCurrency(transaction.amount)}?`,
+    confirmText: 'Delete',
+    confirmColor: 'error'
+  })
+
+  if (confirmed && props.holding) {
+    try {
+      await deleteTransaction(transaction.id)
+      // Reload transactions to reflect changes
+      await loadTransactions()
+    } catch (error) {
+      console.error('Failed to delete transaction:', error)
+    }
+  }
+}
+
+async function handleTransactionSaved() {
+  // Reload transactions after edit
+  await loadTransactions()
 }
 
 function getTransactionIcon(type: string) {
@@ -177,13 +212,31 @@ function getTransactionColor(type: string) {
               </template>
 
               <VListItemTitle class="font-weight-semibold">
-                <div class="d-flex ga-2 text-capitalize">
+                <div class="d-flex align-center ga-2 text-capitalize">
                   <span class="text-primary">{{ transaction.transaction_type }}</span>
                   <span>
                     <VChip size="x-small" color="primary" variant="outlined">
                       {{ formatDate(transaction.purchase_date || transaction.created_at) }}
                     </VChip>
                   </span>
+
+                  <div class="ml-auto" v-if="$vuetify.display.xs">
+                    <!-- Actions Dropdown Menu -->
+                    <VMenu location="bottom end" scroll-strategy="close">
+                      <template v-slot:activator="{ props }">
+                        <VBtn icon="mdi-dots-vertical" size="x-small" variant="text" v-bind="props" />
+                      </template>
+                      <VList density="compact" style="min-width: 120px;">
+                        <VListItem @click="openEditTransaction(transaction)">
+                          <VListItemTitle>Edit</VListItemTitle>
+                        </VListItem>
+                        <VDivider />
+                        <VListItem @click="handleDeleteTransaction(transaction)">
+                          <VListItemTitle class="text-error font-weight-bold">Delete</VListItemTitle>
+                        </VListItem>
+                      </VList>
+                    </VMenu>
+                  </div>
                 </div>
               </VListItemTitle>
 
@@ -200,7 +253,7 @@ function getTransactionColor(type: string) {
                     </div>
                   </div>
                   <!-- Pocket Sources with horizontal scroll -->
-                  <div v-if="transaction.pocket_sources && transaction.pocket_sources.length > 0" class="d-flex align-center ga-2 mt-1">
+                  <div v-if="transaction.pocket_sources && transaction.pocket_sources.length > 0" class="d-flex align-center ga-2">
                     <VIcon icon="mdi-wallet-outline" size="x-small" />
                     <div class="d-flex ga-1 overflow-x-auto">
                       <VChip
@@ -211,44 +264,50 @@ function getTransactionColor(type: string) {
                         variant="tonal"
                         class="flex-shrink-0"
                       >
-                        {{ source.pocket_name }}: {{ formatPercentage(source.percentage) }}
+                        {{ source.pocket_name }}
                       </VChip>
                     </div>
+                  </div>
+                  <!-- Notes -->
+                  <div v-if="transaction.notes" class="d-flex align-center ga-2 font-italic">
+                    <VIcon icon="mdi-note-text-outline" size="x-small" />
+                    <span class="text-caption text-medium-emphasis">{{ transaction.notes }}</span>
                   </div>
                 </div>
               </VListItemSubtitle>
 
               <template #append v-if="!$vuetify.display.xs">
                 <div class="d-flex flex-column align-end ga-2">
-                  <!-- Allocation Link -->
-                  <VBtn
-                    v-if="transaction.linked_allocation_id"
-                    size="x-small"
-                    variant="flat"
-                    color="primary"
-                    rounded="pill"
-                    prepend-icon="mdi-link-variant"
-                    @click="handleAllocationClick(transaction.linked_allocation_id)"
-                  >
-                    Allocation
-                  </VBtn>
-                  
-                  <!-- Notes Badge -->
-                  <VMenu v-if="transaction.notes" location="start">
-                    <template #activator="{ props }">
-                      <VIcon
-                        v-bind="props"
-                        icon="mdi-note-text"
-                        size="small"
-                        color="grey"
-                      />
-                    </template>
-                    <VCard max-width="300">
-                      <VCardText class="text-caption">
-                        {{ transaction.notes }}
-                      </VCardText>
-                    </VCard>
-                  </VMenu>
+                  <!-- Allocation Link & Actions Menu -->
+                  <div class="d-flex align-center ga-1">
+                    <VBtn
+                      v-if="transaction.linked_allocation_id"
+                      size="x-small"
+                      variant="flat"
+                      color="primary"
+                      rounded="pill"
+                      prepend-icon="mdi-link-variant"
+                      @click="handleAllocationClick(transaction.linked_allocation_id)"
+                    >
+                      Allocation
+                    </VBtn>
+                    
+                    <!-- Actions Dropdown Menu -->
+                    <VMenu location="bottom end" scroll-strategy="close">
+                      <template v-slot:activator="{ props }">
+                        <VBtn icon="mdi-dots-vertical" size="x-small" variant="text" v-bind="props" />
+                      </template>
+                      <VList density="compact" style="min-width: 120px;">
+                        <VListItem @click="openEditTransaction(transaction)">
+                          <VListItemTitle>Edit</VListItemTitle>
+                        </VListItem>
+                        <VDivider />
+                        <VListItem @click="handleDeleteTransaction(transaction)">
+                          <VListItemTitle class="text-error font-weight-bold">Delete</VListItemTitle>
+                        </VListItem>
+                      </VList>
+                    </VMenu>
+                  </div>
                 </div>
               </template>
             </VListItem>
@@ -268,4 +327,12 @@ function getTransactionColor(type: string) {
       </VCardActions>
     </VCard>
   </VDialog>
+
+  <!-- Transaction Edit Dialog -->
+  <TransactionEditDialog
+    v-model="showEditDialog"
+    :transaction="selectedTransaction"
+    :holding="holding"
+    @saved="handleTransactionSaved"
+  />
 </template>

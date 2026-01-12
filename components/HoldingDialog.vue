@@ -5,7 +5,6 @@ import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/con
 
 const props = defineProps<{
   modelValue: boolean
-  holding?: Holding
   allocationContext?: Allocation | null
 }>()
 
@@ -14,7 +13,7 @@ const emit = defineEmits<{
   'save': []
 }>()
 
-const { createHolding, updateHolding } = useInvestments()
+const { createHolding } = useInvestments()
 const { allocations } = useAllocations()
 const { success: showSuccess, error: showError } = useNotification()
 
@@ -22,8 +21,6 @@ const dialog = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
-
-const isEditMode = computed(() => !!props.holding)
 
 const form = ref({
   asset_type: null as string | 'gold' | 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'other' | null | any,
@@ -76,7 +73,7 @@ const groupedInstrumentOptions = computed(() => {
 
 // Check if instrument is custom (not in predefined options)
 const isCustomInstrument = computed(() => {
-  if (!form.value.instrument_name || isEditMode.value) return false
+  if (!form.value.instrument_name) return false
   
   // Check if it's a predefined instrument
   const found = groupedInstrumentOptions.value.find(
@@ -88,8 +85,7 @@ const isCustomInstrument = computed(() => {
 
 // Auto-derive asset type and asset name from selected instrument
 watch(() => form.value.instrument_name, (newInstrument) => {
-  if (!isEditMode.value) {
-    if (newInstrument) {
+  if (newInstrument) {
       // Find the selected instrument in grouped options (skip subheaders and dividers)
       const selected = groupedInstrumentOptions.value.find(
         item => item.type !== 'subheader' && item.type !== 'divider' && item.value === newInstrument
@@ -104,21 +100,19 @@ watch(() => form.value.instrument_name, (newInstrument) => {
         form.value.asset_type = null
         form.value.asset_name = ''
       }
-    } else {
-      // Instrument cleared - reset asset type
-      form.value.asset_type = null
-      form.value.asset_name = ''
-    }
+  } else {
+    // Instrument cleared - reset asset type
+    form.value.asset_type = null
+    form.value.asset_name = ''
   }
 })
 
 // Update purchase_date when user selects allocation in Step 3
 watch(() => form.value.linked_allocation_id, (newAllocationId) => {
   // Only auto-update date when:
-  // 1. Not in edit mode
-  // 2. Not from allocation context (that's already set in Step 2)
-  // 3. User actually selected an allocation
-  if (!isEditMode.value && !props.allocationContext && newAllocationId) {
+  // 1. Not from allocation context (that's already set in Step 2)
+  // 2. User actually selected an allocation
+  if (!props.allocationContext && newAllocationId) {
     const selectedAllocation = allocations.value.find(a => a.id === newAllocationId)
     if (selectedAllocation) {
       // Update purchase_date to match the selected allocation's date
@@ -213,8 +207,6 @@ function prevStep() {
 
 
 const canProceedStep1 = computed(() => {
-  if (isEditMode.value) return true
-  
   const hasBasicFields = form.value.platform && form.value.instrument_name
   
   // If custom instrument, also require asset type
@@ -280,25 +272,14 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    if (isEditMode.value && props.holding) {
-      // Update mode - update totals manually (advanced use case)
-      await updateHolding(props.holding.id, {
-        total_investment: form.value.amount,
-        total_quantity: quantity,
-        platform: form.value.platform as string,
-        instrument_name: form.value.instrument_name as string
-      })
-      showSuccess('Holding updated successfully')
+    // Create mode - use submitData
+    const result = await createHolding(submitData)
+    
+    // Show appropriate success message based on merge status
+    if (result?.is_merged) {
+      showSuccess('Transaction added to existing holding')
     } else {
-      // Create mode - use submitData
-      const result = await createHolding(submitData)
-      
-      // Show appropriate success message based on merge status
-      if (result?.is_merged) {
-        showSuccess('Transaction added to existing holding')
-      } else {
-        showSuccess('New holding created successfully')
-      }
+      showSuccess('New holding created successfully')
     }
     
     emit('save')
@@ -320,27 +301,6 @@ watch(() => props.modelValue, (newVal) => {
       form.value.purchase_date = formatDateInput(props.allocationContext.date)
       amountDisplay.value = formatNumberInput(props.allocationContext.source_amount)
       currentStep.value = 1
-    } else if (props.holding) {
-      // Edit mode - populate form with holding data (aggregated)
-      const totalInvestment = Number(props.holding.total_investment) || 0
-      const totalQuantity = Number(props.holding.total_quantity) || 0
-      const avgPrice = totalQuantity > 0 ? totalInvestment / totalQuantity : 0
-      
-      form.value = {
-        asset_type: (props.holding as any).asset_type || 'gold',
-        asset_name: (props.holding as any).asset_name || '',
-        platform: props.holding.platform,
-        instrument_name: props.holding.instrument_name,
-        amount: totalInvestment,
-        average_price: avgPrice > 0 ? avgPrice : undefined,
-        quantity: totalQuantity,
-        purchase_date: formatDateInput(null),
-        notes: '',
-        linked_allocation_id: undefined
-      }
-      amountDisplay.value = formatNumberInput(totalInvestment)
-      averagePriceDisplay.value = avgPrice > 0 ? formatNumberInput(avgPrice) : ''
-      currentStep.value = 1
     } else {
       // Create mode - reset form to defaults
       resetForm()
@@ -357,7 +317,7 @@ watch(() => props.modelValue, (newVal) => {
     <VCard>
       <VCardTitle class="pa-5 text-subtitle-1 font-weight-semibold text-primary">
         <VIcon icon="mdi-finance" class="mr-2" />
-        {{ isEditMode ? 'Update Holding' : 'Add Investment Holding' }}
+        Add Investment Holding
       </VCardTitle>
 
       <VDivider />
@@ -408,13 +368,6 @@ watch(() => props.modelValue, (newVal) => {
             <VStepperWindow class="ma-0 pt-2">
             <!-- Step 1: Asset Information -->
             <VStepperWindowItem :value="1">
-              <VAlert v-if="isEditMode" color="info" variant="tonal" class="mb-4">
-                <div class="text-caption">
-                  <VIcon icon="mdi-information" size="small" class="mr-1" />
-                  Instrument and Platform cannot be changed. Create a new holding if needed.
-                </div>
-              </VAlert>
-              
               <VRow>
                 <!-- Instrument (grouped by asset type) -->
                 <VCol cols="12" md="6">
@@ -429,8 +382,7 @@ watch(() => props.modelValue, (newVal) => {
                     hint="Type to search or add custom instrument"
                     persistent-hint
                     variant="outlined"
-                    :disabled="isEditMode || submitting"
-                    :readonly="isEditMode"
+                    :disabled="submitting"
                     clearable
                   >
                     <template v-slot:prepend-inner>
@@ -488,8 +440,7 @@ watch(() => props.modelValue, (newVal) => {
                     :items="commonPlatforms"
                     placeholder="Select or type platform name"
                     variant="outlined"
-                    :disabled="isEditMode || submitting"
-                    :readonly="isEditMode"
+                    :disabled="submitting"
                     clearable
                   >
                     <template v-slot:prepend-inner>
@@ -502,13 +453,6 @@ watch(() => props.modelValue, (newVal) => {
 
             <!-- Step 2: Financial Values -->
             <VStepperWindowItem :value="2">
-              <VAlert v-if="isEditMode" color="info" variant="tonal" class="mb-4">
-                <div class="text-caption">
-                  <VIcon icon="mdi-information" size="small" class="mr-1" />
-                  You can edit all financial values. Instrument, Platform, and Allocation Link are locked.
-                </div>
-              </VAlert>
-              
               <VRow>
                 <!-- Row 1: Initial Investment | Purchase Date -->
                 <VCol cols="12" md="6">
@@ -548,7 +492,6 @@ watch(() => props.modelValue, (newVal) => {
                     type="date"
                     variant="outlined"
                     :disabled="submitting"
-                    :hint="isFromAllocation ? '' : 'Select purchase date'"
                     persistent-hint
                   />
                 </VCol>
@@ -599,10 +542,10 @@ watch(() => props.modelValue, (newVal) => {
                     label="Link to Budget Allocation"
                     :items="allocationItems"
                     variant="outlined"
-                    :disabled="submitting || isFromAllocation || isEditMode"
-                    :readonly="isFromAllocation || isEditMode"
+                    :disabled="submitting || isFromAllocation"
+                    :readonly="isFromAllocation"
                     clearable
-                    :hint="isEditMode ? 'Cannot change allocation link' : (isFromAllocation ? 'Auto-linked from allocation' : 'Optional')"
+                    :hint="isFromAllocation ? 'Auto-linked from allocation' : 'Optional'"
                     persistent-hint
                   >
                     <template v-slot:prepend-inner>
@@ -647,6 +590,7 @@ watch(() => props.modelValue, (newVal) => {
             @click="prevStep"
             :disabled="submitting || currentStep === 1"
             class="text-none"
+            prepend-icon="mdi-chevron-left"
           >
             Back
           </VBtn>
@@ -657,6 +601,7 @@ watch(() => props.modelValue, (newVal) => {
             @click="nextStep"
             :disabled="(currentStep === 1 && !canProceedStep1) || (currentStep === 2 && !canProceedStep2) || submitting"
             class="text-none"
+            append-icon="mdi-chevron-right"
           >
             Next
           </VBtn>
@@ -669,7 +614,7 @@ watch(() => props.modelValue, (newVal) => {
             :disabled="submitting"
             class="text-none px-5"
           >
-            {{ isEditMode ? 'Update' : 'Add Holding' }}
+            Add Holding
           </VBtn>
         </div>
       </VCardActions>
