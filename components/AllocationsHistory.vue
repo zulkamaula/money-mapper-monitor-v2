@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Allocation } from '~/types/models'
-import { formatPercentage, formatCurrency, formatDate } from '~/utils/format'
+import { formatPercentage, formatCurrency, formatDate, parseNumberInput } from '~/utils/format'
 
 // Self-contained - use composables
 const { selectedBook } = useMoneyBooks()
@@ -72,15 +72,14 @@ watch(targetAllocationId, async (allocationId) => {
 
 async function copyAmount(amount: number, itemId: string) {
   try {
-    await navigator.clipboard.writeText(amount.toString())
+    const extractNumber = String(parseNumberInput(String(amount)))
+    await navigator.clipboard.writeText(extractNumber)
     copiedAmount.value = itemId
-    showSuccess(`Copied: ${formatCurrency(amount)}`)
     setTimeout(() => {
       copiedAmount.value = null
     }, 2000)
   } catch (error) {
     console.error('Failed to copy:', error)
-    showError('Failed to copy to clipboard')
   }
 }
 

@@ -113,6 +113,26 @@ async function handleSubmit() {
   }
 }
 
+function handlePercentageInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  let value = input.value
+  
+  // Remove leading zeros (but keep single 0 or 0.x)
+  if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
+    value = value.replace(/^0+/, '')
+  }
+  
+  // Parse and enforce max
+  const numValue = parseFloat(value)
+  if (!isNaN(numValue) && numValue > 100) {
+    pocketData.value.percentage = 100
+  } else if (!isNaN(numValue)) {
+    pocketData.value.percentage = numValue
+  } else if (value === '' || value === '0') {
+    pocketData.value.percentage = 0
+  }
+}
+
 async function handleDelete(pocketId: string) {
   const pocket = pockets.value.find(p => p.id === pocketId)
   if (!pocket) return
@@ -232,12 +252,19 @@ async function handleDelete(pocketId: string) {
 
         <VCardText class="pa-5 overflow-auto">
           <VTextField v-model="pocketData.name" label="Pocket Name" variant="outlined" class="mb-4" autofocus />
-          <VTextField v-model.number="pocketData.percentage" label="Percentage" type="number" variant="outlined"
-            suffix="%" :hint="`Remaining: ${formatPercentage(remainingPercentage)}`" persistent-hint />
-
-          <div v-if="!canAddPocket && pocketData.percentage > 0" class="text-error text-caption mt-2">
-            Exceeds limit! Remaining after this: {{ formatPercentage(remainingPercentage) }}
-          </div>
+          <VTextField 
+            v-model.number="pocketData.percentage" 
+            label="Percentage" 
+            type="number" 
+            variant="outlined"
+            suffix="%" 
+            min="0" 
+            max="100"
+            step="0.01"
+            :hint="`Remaining: ${formatPercentage(remainingPercentage)}`" 
+            persistent-hint
+            @input="handlePercentageInput"
+          />
         </VCardText>
 
         <VDivider />
