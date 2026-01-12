@@ -85,17 +85,18 @@ export default defineEventHandler(async (event) => {
   const totalQuantity = transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
   
   // Aggregate pocket funding sources
-  const pocketMap = new Map<string, { name: string, amount: number }>()
+  // Use pocket_name (snapshot) as key, not pocket_id
+  // This preserves historical accuracy when pockets are renamed
+  const pocketMap = new Map<string, { amount: number }>()
   
   for (const transaction of enrichedTransactions) {
     if (transaction.pocket_sources && transaction.pocket_sources.length > 0) {
       for (const source of transaction.pocket_sources) {
-        const existing = pocketMap.get(source.pocket_id)
+        const existing = pocketMap.get(source.pocket_name)
         if (existing) {
           existing.amount += Number(source.pocket_amount)
         } else {
-          pocketMap.set(source.pocket_id, {
-            name: source.pocket_name,
+          pocketMap.set(source.pocket_name, {
             amount: Number(source.pocket_amount)
           })
         }
@@ -104,11 +105,11 @@ export default defineEventHandler(async (event) => {
   }
   
   // Calculate percentages
-  const pocketSources = Array.from(pocketMap.values())
-    .map(p => ({
-      pocket_name: p.name,
-      pocket_amount: p.amount,
-      percentage: totalAllocated > 0 ? (p.amount / totalAllocated * 100) : 0
+  const pocketSources = Array.from(pocketMap.entries())
+    .map(([name, data]) => ({
+      pocket_name: name,
+      pocket_amount: data.amount,
+      percentage: totalAllocated > 0 ? (data.amount / totalAllocated * 100) : 0
     }))
     .sort((a, b) => b.pocket_amount - a.pocket_amount)
   

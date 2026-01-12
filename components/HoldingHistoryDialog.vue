@@ -12,7 +12,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { fetchTransactions, deleteTransaction } = useInvestments()
+const { fetchTransactions, deleteTransaction, clearCache: clearHoldingsCache, loadInvestments } = useInvestments()
+const { clearCache: clearAllocationsCache } = useAllocations()
+const { selectedBook } = useMoneyBooks()
 const { navigateToAllocation } = useAllocationNavigation()
 const { showDialog } = useConfirmDialog()
 
@@ -82,19 +84,45 @@ async function handleDeleteTransaction(transaction: HoldingTransaction) {
   })
 
   if (confirmed && props.holding) {
+    // Show loading immediately
+    loading.value = true
     try {
       await deleteTransaction(transaction.id)
+      // ✅ Optimized sync: Clear cache + refetch holdings
+      // InvestmentPortfolio watch will auto-refetch allocations (avoid race condition)
+      if (selectedBook.value?.id) {
+        clearHoldingsCache(selectedBook.value.id)
+        await loadInvestments(selectedBook.value.id)
+      }
+      // Clear allocations cache only - watch will handle refetch
+      clearAllocationsCache()
       // Reload transactions to reflect changes
       await loadTransactions()
     } catch (error) {
       console.error('Failed to delete transaction:', error)
+      loading.value = false
     }
   }
 }
 
 async function handleTransactionSaved() {
-  // Reload transactions after edit
-  await loadTransactions()
+  // Show loading immediately
+  loading.value = true
+  try {
+    // ✅ Optimized sync: Clear cache + refetch holdings
+    // InvestmentPortfolio watch will auto-refetch allocations (avoid race condition)
+    if (selectedBook.value?.id) {
+      clearHoldingsCache(selectedBook.value.id)
+      await loadInvestments(selectedBook.value.id)
+    }
+    // Clear allocations cache only - watch will handle refetch
+    clearAllocationsCache()
+    // Reload transactions after edit
+    await loadTransactions()
+  } catch (error) {
+    console.error('Failed to save transaction:', error)
+    loading.value = false
+  }
 }
 
 function getTransactionIcon(type: string) {
@@ -135,7 +163,7 @@ function getTransactionColor(type: string) {
               <VIcon icon="mdi-history" size="small" />
               Transaction History
             </div>
-            <div v-if="holding" class="bg-white text-caption text-primary mt-1 rounded-pill px-2">
+            <div v-if="holding" class="bg-white text-caption text-primary mt-1 rounded-pill px-2 w-auto">
               {{ holding.instrument_name }} @ {{ holding.platform }}
             </div>
           </div>

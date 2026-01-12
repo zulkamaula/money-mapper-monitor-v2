@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { Allocation } from '~/types/models'
-import { formatPercentage, formatCurrency, formatDate, parseNumberInput } from '~/utils/format'
+import { formatCurrency, formatDate, formatPercentage, parseNumberInput } from '~/utils/format'
 
 // Self-contained - use composables
 const { selectedBook } = useMoneyBooks()
 const { pockets } = usePockets()
-const { allocations, loading, loadAllocations, deleteAllocation } = useAllocations()
-const { holdings, loadInvestments } = useInvestments()
-const { success: showSuccess, error: showError } = useNotification()
+const { allocations, loading, loadAllocations, deleteAllocation, clearCache } = useAllocations()
+const { loadInvestments, clearCache: clearHoldingsCache } = useInvestments()
+const { success: showSuccess } = useNotification()
 const { showDialog: showConfirmDialog } = useConfirmDialog()
 const { targetAllocationId, clearTarget } = useAllocationNavigation()
 
@@ -104,6 +104,8 @@ watch(showHoldingDialog, async (isOpen) => {
     await loadInvestments(selectedBook.value.id)
     
     // Holding linked to allocation → affects allocation totals (update counts)
+    // Clear cache to force fresh fetch with updated total_allocated
+    clearCache()
     await loadAllocations()
     
     selectedAllocationForHolding.value = null
@@ -141,6 +143,10 @@ async function handleDelete(id: string) {
     confirmColor: 'error',
     onConfirm: async () => {
       await deleteAllocation(id)
+      // ✅ Bidirectional sync: Clear holdings cache to refresh unlinked holdings
+      if (selectedBook.value?.id) {
+        clearHoldingsCache(selectedBook.value.id)
+      }
       showSuccess('Allocation deleted successfully')
     }
   })

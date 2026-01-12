@@ -5,6 +5,7 @@ import type { Holding, HoldingBudgetSource } from '~/types/models'
 
 const { holdings, loading, holdingsByAsset, handleDeleteHolding, fetchBudgetSources } = useInvestments()
 const { navigateToAllocation } = useAllocationNavigation()
+const { loadAllocations, clearCache: clearAllocationsCache } = useAllocations()
 
 const showHistoryDialog = ref(false)
 const selectedHolding = ref<Holding | undefined>(undefined)
@@ -49,6 +50,13 @@ function openHistoryDialog(holding: Holding) {
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
 }
+
+// ✅ Bidirectional sync: Holdings changes → Refetch allocations
+// When holdings change (create/edit/delete), allocation total_allocated needs refresh
+watch(() => holdings.value, async () => {
+  clearAllocationsCache()
+  await loadAllocations()
+}, { deep: true })
 
 // Watch for new asset types and expand only newly added ones
 watch(() => holdingsByAsset.value, (newVal, oldVal) => {

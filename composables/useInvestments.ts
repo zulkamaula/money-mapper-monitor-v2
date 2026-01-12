@@ -143,6 +143,7 @@ export const useInvestments = () => {
     }
 
     const bookId = selectedBook.value.id
+    loading.value = true
 
     try {
       const response = await $fetch<Holding & { is_merged: boolean; transaction_id: string }>('/api/holdings', {
@@ -172,6 +173,8 @@ export const useInvestments = () => {
       console.error('Failed to create holding:', error)
       showError('Failed to create holding')
       throw error
+    } finally {
+      loading.value = false
     }
   }
 
@@ -182,6 +185,7 @@ export const useInvestments = () => {
     platform?: string
     instrument_name?: string
   }) {
+    loading.value = true
     try {
       const updated = await $fetch<Holding>(`/api/holdings/${holdingId}`, {
         method: 'PATCH',
@@ -203,11 +207,14 @@ export const useInvestments = () => {
       console.error('Failed to update holding:', error)
       showError('Failed to update holding')
       throw error
+    } finally {
+      loading.value = false
     }
   }
 
   // Delete holding
   async function deleteHolding(holdingId: string) {
+    loading.value = true
     try {
       await $fetch(`/api/holdings/${holdingId}`, {
         method: 'DELETE' as any
@@ -223,6 +230,8 @@ export const useInvestments = () => {
       console.error('Failed to delete holding:', error)
       showError('Failed to delete holding')
       throw error
+    } finally {
+      loading.value = false
     }
   }
 
@@ -237,8 +246,15 @@ export const useInvestments = () => {
       cancelText: 'Cancel',
       confirmColor: 'error',
       onConfirm: async () => {
-        await deleteHolding(holding.id)
-        showSuccess('Holding deleted successfully')
+        // Show loading immediately
+        loading.value = true
+        try {
+          await deleteHolding(holding.id)
+          showSuccess('Holding deleted successfully')
+        } catch (error) {
+          loading.value = false
+          throw error
+        }
       }
     })
   }

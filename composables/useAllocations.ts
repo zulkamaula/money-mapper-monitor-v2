@@ -123,11 +123,17 @@ export const useAllocations = () => {
     }
   }
 
+  // Clear cache to force fresh fetch
+  function clearCache() {
+    cache.value.clear()
+  }
+
   return {
     allocations,
     loading,
     loadAllocations,
     createAllocation,
-    deleteAllocation
+    deleteAllocation,
+    clearCache
   }
 }
