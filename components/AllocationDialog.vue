@@ -15,7 +15,7 @@ interface Props {
 interface PocketAllocation {
   pocket_id: string
   pocket_name: string
-  percentage: number
+  percentage: number | null
 }
 
 const props = defineProps<Props>()
@@ -42,7 +42,7 @@ const internalValue = computed({
 
 const totalPercentage = computed(() => {
   return pocketAllocations.value.reduce((sum, p) => {
-    const percentage = Number(p.percentage) || 0
+    const percentage = p.percentage ?? 0
     return sum + percentage
   }, 0)
 })
@@ -67,14 +67,6 @@ function handleAmountInput(event: Event) {
   sourceAmountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
 }
 
-function handleAmountPaste(event: ClipboardEvent) {
-  event.preventDefault()
-  const pastedText = event.clipboardData?.getData('text') || ''
-  const parsed = parseNumberInput(pastedText)
-  form.value.sourceAmount = parsed
-  sourceAmountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
-}
-
 function initializePocketAllocations() {
   pocketAllocations.value = pockets.value.map(pocket => ({
     pocket_id: pocket.id,
@@ -85,7 +77,18 @@ function initializePocketAllocations() {
 
 function updatePercentage(index: number, value: string | number) {
   if (pocketAllocations.value[index]) {
-    const numValue = typeof value === 'string' ? parseInt(value) || 0 : value
+    // Allow empty string (null value) for better UX
+    if (value === '' || value === null || value === undefined) {
+      pocketAllocations.value[index].percentage = null
+      return
+    }
+    
+    const numValue = typeof value === 'string' ? parseInt(value) : value
+    if (isNaN(numValue)) {
+      pocketAllocations.value[index].percentage = null
+      return
+    }
+    
     pocketAllocations.value[index].percentage = Math.max(0, Math.min(100, Math.floor(numValue)))
   }
 }
@@ -106,11 +109,14 @@ async function handleSave() {
   
   saving.value = true
   try {
-    const customPockets = pocketAllocations.value.map(p => ({
-      id: p.pocket_id,
-      name: p.pocket_name,
-      percentage: p.percentage
-    }))
+    // Filter out null percentages and ensure valid pockets
+    const customPockets = pocketAllocations.value
+      .filter(p => p.percentage !== null)
+      .map(p => ({
+        id: p.pocket_id,
+        name: p.pocket_name,
+        percentage: p.percentage as number // Safe after filter
+      }))
 
     await createAllocation(
       form.value.sourceAmount, 
@@ -194,6 +200,15 @@ function resetForm() {
                 >
                   Total: {{ totalPercentage }}%
                 </VChip>
+                <!-- Validation Message -->
+                <VChip
+                  v-if="totalPercentage !== 100"
+                  color="success"
+                  size="small"
+                  variant="flat"
+                >
+                  {{ totalPercentage < 100 ? 'Missing' : 'Exceeds by' }} {{ Math.abs(100 - totalPercentage) }}%
+                </VChip>
               </div>
               <div class="text-caption text-medium-emphasis mb-4">
                 Adjust percentages as needed. Total must be 100% to proceed.
@@ -221,13 +236,6 @@ function resetForm() {
                     step="1" />
                 </VCol>
               </VRow>
-
-              <!-- Validation Message -->
-              <div v-if="totalPercentage !== 100" class="mt-4 pa-3 rounded bg-error-darken-4">
-                <div class="text-caption">
-                  {{ totalPercentage < 100 ? 'Missing' : 'Exceeds by' }} {{ Math.abs(100 - totalPercentage) }}%
-                </div>
-              </div>
             </VStepperWindowItem>
 
             <!-- Step 2: Allocation Form -->
@@ -240,9 +248,8 @@ function resetForm() {
                 class="mb-4"
                 autofocus 
                 prefix="Rp" 
-                @input="handleAmountInput" 
-                @paste="handleAmountPaste" 
-                inputmode="numeric" />
+                inputmode="numeric"
+                @input="handleAmountInput" />
 
               <VTextField 
                 v-model="form.date" 

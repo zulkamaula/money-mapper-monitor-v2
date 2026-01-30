@@ -25,7 +25,7 @@ watch(() => selectedBook.value, async (newBook) => {
 const showDialog = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const editingPocketId = ref<string | null>(null)
-const pocketData = ref({ name: '', percentage: 0 })
+const pocketData = ref<{ name: string; percentage: number | null }>({ name: '', percentage: null })
 const isExpanded = ref(false)
 const submitting = ref(false)
 
@@ -56,7 +56,7 @@ const canAddPocket = computed(() => {
         return totalPercentage.value - pocketPercentage
       })()
     : totalPercentage.value
-  const wouldBeTotal = currentTotal + pocketData.value.percentage
+  const wouldBeTotal = currentTotal + (pocketData.value.percentage ?? 0)
   return wouldBeTotal <= 100.01
 })
 
@@ -68,13 +68,13 @@ const remainingPercentage = computed(() => {
         return totalPercentage.value - pocketPercentage
       })()
     : totalPercentage.value
-  return 100 - currentTotal - (pocketData.value.percentage || 0)
+  return 100 - currentTotal - (pocketData.value.percentage ?? 0)
 })
 
 function openDialog() {
   dialogMode.value = 'create'
   editingPocketId.value = null
-  pocketData.value = { name: '', percentage: 0 }
+  pocketData.value = { name: '', percentage: null }
   showDialog.value = true
 }
 
@@ -89,7 +89,7 @@ function openEditDialog(pocket: Pocket) {
 }
 
 async function handleSubmit() {
-  if (!pocketData.value.name.trim() || pocketData.value.percentage <= 0 || !canAddPocket.value) {
+  if (!pocketData.value.name.trim() || pocketData.value.percentage === null || pocketData.value.percentage <= 0 || !canAddPocket.value) {
     return
   }
 
@@ -104,7 +104,7 @@ async function handleSubmit() {
     }
 
     showDialog.value = false
-    pocketData.value = { name: '', percentage: 0 }
+    pocketData.value = { name: '', percentage: null }
     editingPocketId.value = null
   } catch (error) {
     showError(dialogMode.value === 'create' ? 'Failed to create pocket' : 'Failed to update pocket')
@@ -117,6 +117,12 @@ function handlePercentageInput(event: Event) {
   const input = event.target as HTMLInputElement
   let value = input.value
   
+  // Allow empty value (null for better UX)
+  if (value === '' || value === null || value === undefined) {
+    pocketData.value.percentage = null
+    return
+  }
+  
   // Remove leading zeros (but keep single 0 or 0.x)
   if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
     value = value.replace(/^0+/, '')
@@ -124,12 +130,17 @@ function handlePercentageInput(event: Event) {
   
   // Parse and enforce max
   const numValue = parseFloat(value)
-  if (!isNaN(numValue) && numValue > 100) {
+  if (isNaN(numValue)) {
+    pocketData.value.percentage = null
+    return
+  }
+  
+  if (numValue > 100) {
     pocketData.value.percentage = 100
-  } else if (!isNaN(numValue)) {
+  } else if (numValue < 0) {
+    pocketData.value.percentage = null
+  } else {
     pocketData.value.percentage = numValue
-  } else if (value === '' || value === '0') {
-    pocketData.value.percentage = 0
   }
 }
 
@@ -273,7 +284,7 @@ async function handleDelete(pocketId: string) {
           <VSpacer />
           <VBtn color="grey" variant="text" class="text-none" @click="showDialog = false">Cancel</VBtn>
           <VBtn color="primary" variant="flat" class="px-5 text-none" @click="handleSubmit"
-            :disabled="!pocketData.name.trim() || pocketData.percentage <= 0 || !canAddPocket || submitting"
+            :disabled="!pocketData.name.trim() || pocketData.percentage === null || pocketData.percentage <= 0 || !canAddPocket || submitting"
             :loading="submitting">
             {{ dialogMode === 'create' ? 'Add Pocket' : 'Save Changes' }}
           </VBtn>
