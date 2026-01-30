@@ -66,10 +66,21 @@ export const useAllocations = () => {
   }
 
   // Create allocation
-  async function createAllocation(sourceAmount: number, date: string, notes: string) {
+  async function createAllocation(
+    sourceAmount: number, 
+    date: string, 
+    notes: string,
+    customPockets?: Array<{ id: string; name: string; percentage: number }>
+  ) {
     if (!selectedBook.value) return null
 
     try {
+      const pocketsToUse = customPockets || pockets.value.map(p => ({
+        id: p.id,
+        name: p.name,
+        percentage: p.percentage
+      }))
+
       const newAllocation = await $fetch<Allocation>('/api/allocations', {
         method: 'POST',
         body: {
@@ -77,11 +88,7 @@ export const useAllocations = () => {
           source_amount: sourceAmount,
           date,
           notes,
-          pockets: pockets.value.map(p => ({
-            id: p.id,
-            name: p.name,
-            percentage: p.percentage
-          }))
+          pockets: pocketsToUse
         }
       })
 
