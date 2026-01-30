@@ -72,8 +72,11 @@ watch(targetAllocationId, async (allocationId) => {
 
 async function copyAmount(amount: number, itemId: string) {
   try {
-    const extractNumber = String(parseNumberInput(String(amount)))
-    await navigator.clipboard.writeText(extractNumber)
+    // ✅ FIX: Parse string representation to remove decimals from DB
+    // Database returns NUMERIC type which may include .00 decimal
+    // parseNumberInput handles both "3000200.00" and "3.000.200,00" formats
+    const cleanNumber = parseNumberInput(String(amount))
+    await navigator.clipboard.writeText(String(cleanNumber))
     copiedAmount.value = itemId
     setTimeout(() => {
       copiedAmount.value = null

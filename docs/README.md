@@ -21,6 +21,7 @@ Core development patterns, guides, and best practices.
 |----------|-------------|
 | [API Patterns](./development/API_PATTERNS.md) | **⭐ Required reading** - Backend/frontend patterns, composables, preventing N+1 queries |
 | [UI Conventions](./development/UI_CONVENTIONS.md) | **⭐ Required reading** - UI/UX patterns, Vuetify components, design guidelines |
+| [Testing Guide](./development/TESTING_GUIDE.md) | Manual testing checklist, critical flows, known issues & fixes |
 | [Migration Guide](./development/MIGRATION_GUIDE.md) | Database migration procedures and best practices |
 | [Security Fix](./development/SECURITY_FIX.md) | Security vulnerabilities and fixes applied |
 
@@ -48,11 +49,10 @@ Deployment guides and infrastructure setup.
 ---
 
 ### ⚙️ [Infrastructure](./infrastructure/)
-Performance optimization and error handling.
+Performance optimization strategies.
 
 | Document | Description |
 |----------|-------------|
-| [API Error Handling](./infrastructure/API_ERROR_HANDLING.md) | Error handling patterns across the stack |
 | [Optimization Guide](./infrastructure/OPTIMIZATION_GUIDE.md) | Performance optimization strategies |
 
 ---

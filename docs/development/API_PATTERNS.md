@@ -353,6 +353,50 @@ watch(showHoldingDialog, async (isOpen) => {
 
 ---
 
+## 🔢 Number Formatting & Parsing Patterns
+
+### ✅ Pattern: Handle Both Decimal Formats
+
+**Problem:** Indonesia uses comma (,) for decimals, but databases return period (.) for decimals.
+
+```typescript
+// ❌ WRONG: Only handles Indonesian format
+function parseNumberInput(value: string): number {
+  const parts = value.split(',')
+  return parseInt(parts[0].replace(/\./g, '')) || 0
+}
+// Bug: "3000200.00" → "300020000" (trailing zeros concatenated)
+
+// ✅ CORRECT: Handle both formats
+function parseNumberInput(value: string): number {
+  let cleaned = value.replace(/Rp/gi, '').trim()
+  
+  // Remove decimal part FIRST (before removing thousand separators)
+  const lastCommaIndex = cleaned.lastIndexOf(',')
+  const lastPeriodIndex = cleaned.lastIndexOf('.')
+  
+  if (lastCommaIndex !== -1) {
+    cleaned = cleaned.substring(0, lastCommaIndex)
+  } else if (lastPeriodIndex !== -1 && cleaned.length - lastPeriodIndex <= 3) {
+    cleaned = cleaned.substring(0, lastPeriodIndex)
+  }
+  
+  // Now safe to remove thousand separators
+  cleaned = cleaned.replace(/\./g, '')
+  return parseInt(cleaned.replace(/[^\d]/g, '')) || 0
+}
+```
+
+**Key Rules:**
+1. Remove decimal parts (,00 or .00) BEFORE removing thousand separators
+2. Check both comma and period as decimal separators
+3. Only treat period as decimal if at end with ≤2 digits after it
+4. Test with database-returned values: `"3000200.00"` → `3000200`
+
+**Reference Implementation:** `utils/format.ts` - `parseNumberInput()`
+
+---
+
 ## 🚫 Common Anti-Patterns to Avoid
 
 ### ❌ Anti-Pattern 1: N+1 Queries
