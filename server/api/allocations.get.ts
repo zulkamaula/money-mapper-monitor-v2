@@ -53,13 +53,21 @@ export default defineEventHandler(async (event) => {
           'created_at', ai.created_at
         )
       ) FILTER (WHERE ai.id IS NOT NULL) as allocation_items,
-      COALESCE(COUNT(DISTINCT ht.id), 0)::int as transaction_count,
-      COALESCE(SUM(ht.amount), 0)::numeric as total_allocated
+      COALESCE(ht_summary.transaction_count, 0)::int as transaction_count,
+      COALESCE(ht_summary.total_allocated, 0)::numeric as total_allocated
     FROM public.allocations a
     LEFT JOIN public.allocation_items ai ON ai.allocation_id = a.id
-    LEFT JOIN public.holding_transactions ht ON ht.linked_allocation_id = a.id
+    LEFT JOIN (
+      SELECT 
+        linked_allocation_id as allocation_id,
+        COUNT(*)::int as transaction_count,
+        COALESCE(SUM(amount), 0)::numeric as total_allocated
+      FROM public.holding_transactions
+      WHERE linked_allocation_id IS NOT NULL
+      GROUP BY linked_allocation_id
+    ) ht_summary ON ht_summary.allocation_id = a.id
     WHERE a.money_book_id = ${moneyBookId}
-    GROUP BY a.id, a.money_book_id, a.source_amount, a.date, a.notes, a.created_at
+    GROUP BY a.id, a.money_book_id, a.source_amount, a.date, a.notes, a.created_at, ht_summary.transaction_count, ht_summary.total_allocated
     ORDER BY a.date DESC, a.created_at DESC
   `
   
