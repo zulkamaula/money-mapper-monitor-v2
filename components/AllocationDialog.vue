@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { formatNumberInput, parseNumberInput } from '~/utils/format'
+import { formatNumberInput, formatNumberInputWithCaret, parseNumberInput } from '~/utils/format'
 import type { Pocket } from '~/types/models'
 
 // Self-contained - use composables
@@ -16,6 +16,7 @@ interface PocketAllocation {
   pocket_id: string
   pocket_name: string
   percentage: number | null
+  enabled: boolean
 }
 
 const props = defineProps<Props>()
@@ -42,6 +43,7 @@ const internalValue = computed({
 
 const totalPercentage = computed(() => {
   return pocketAllocations.value.reduce((sum, p) => {
+    if (!p.enabled) return sum
     const percentage = p.percentage ?? 0
     return sum + percentage
   }, 0)
@@ -62,17 +64,26 @@ watch(() => props.modelValue, async (isOpen) => {
 
 function handleAmountInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   form.value.sourceAmount = parsed
-  sourceAmountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  sourceAmountDisplay.value = formatted
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
 }
 
 function initializePocketAllocations() {
   pocketAllocations.value = pockets.value.map(pocket => ({
     pocket_id: pocket.id,
     pocket_name: pocket.name,
-    percentage: Math.floor(pocket.percentage) // Ensure integer only
+    percentage: Math.floor(pocket.percentage), // Ensure integer only
+    enabled: true
   }))
+}
+
+function togglePocketEnabled(index: number) {
+  if (!pocketAllocations.value[index]) return
+  pocketAllocations.value[index].enabled = !pocketAllocations.value[index].enabled
 }
 
 function updatePercentage(index: number, value: string | number) {
@@ -111,7 +122,7 @@ async function handleSave() {
   try {
     // Filter out null percentages and ensure valid pockets
     const customPockets = pocketAllocations.value
-      .filter(p => p.percentage !== null)
+      .filter(p => p.enabled && p.percentage !== null)
       .map(p => ({
         id: p.pocket_id,
         name: p.pocket_name,
@@ -186,32 +197,32 @@ function resetForm() {
           </VStepperHeader>
 
           <VContainer fluid>
-            <VStepperWindow class="ma-0 pt-2">
+            <VStepperWindow class="ma-0 pt-2 pt-sm-0">
             <!-- Step 1: Pocket Budgeting Confirmation -->
             <VStepperWindowItem :value="1">
-              <div class="d-flex align-center ga-3 mb-3">
+              <div class="d-flex flex-wrap justify-space-between align-center ga-2 pb-5 mb-8 border-b">
                 <div class="text-subtitle-2">
                   Confirm Budget Allocation per Pocket
                 </div>
-                <VChip
-                  :color="totalPercentage === 100 ? 'success' : 'error'"
-                  size="small"
-                  variant="flat"
-                >
-                  Total: {{ totalPercentage }}%
-                </VChip>
-                <!-- Validation Message -->
-                <VChip
-                  v-if="totalPercentage !== 100"
-                  color="success"
-                  size="small"
-                  variant="flat"
-                >
-                  {{ totalPercentage < 100 ? 'Missing' : 'Exceeds by' }} {{ Math.abs(100 - totalPercentage) }}%
-                </VChip>
-              </div>
-              <div class="text-caption text-medium-emphasis mb-4">
-                Adjust percentages as needed. Total must be 100% to proceed.
+                <div class="d-flex ga-3">
+                  <VChip
+                    :color="totalPercentage === 100 ? 'success' : 'error'"
+                    size="small"
+                    variant="flat"
+                  >
+                    Total: {{ totalPercentage }}%
+                  </VChip>
+                  <!-- Validation Message -->
+                  <VChip
+                    v-if="totalPercentage !== 100"
+                    color="success"
+                    size="small"
+                    variant="flat"
+                  >
+                    {{ totalPercentage < 100 ? 'Missing' : 'Exceeds by' }} {{ Math.abs(100 - totalPercentage) }}%
+                  </VChip>
+
+                </div>
               </div>
 
               <!-- Pocket List with Percentage Inputs - 3 Column Grid -->
@@ -222,10 +233,24 @@ function resetForm() {
                   cols="12"
                   sm="6"
                   md="4">
+                  <div class="d-flex justify-space-between align-center mb-1">
+                    <div class="text-caption text-medium-emphasis">
+                      {{ pocket.pocket_name }}
+                    </div>
+                    <VBtn
+                      variant="tonal"
+                      size="x-small"
+                      class="text-none"
+                      :color="pocket.enabled ? 'primary' : 'grey'"
+                      @click.stop="togglePocketEnabled(index)"
+                    >
+                      {{ pocket.enabled ? 'On' : 'Off' }}
+                    </VBtn>
+                  </div>
+
                   <VTextField
                     :model-value="pocket.percentage"
                     @update:model-value="(val) => updatePercentage(index, val)"
-                    :label="pocket.pocket_name"
                     type="number"
                     variant="outlined"
                     density="compact"
@@ -233,7 +258,9 @@ function resetForm() {
                     suffix="%"
                     min="0"
                     max="100"
-                    step="1" />
+                    step="1"
+                    :disabled="!pocket.enabled"
+                  />
                 </VCol>
               </VRow>
             </VStepperWindowItem>

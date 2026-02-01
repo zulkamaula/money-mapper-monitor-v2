@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity, formatDateInput, formatDate } from '~/utils/format'
+import { formatNumberInput, formatNumberInputWithCaret, parseNumberInput, formatCurrency, formatQuantity, formatDateInput, formatDate } from '~/utils/format'
 import type { Holding, Allocation } from '~/types/models'
 import { assetTypes, commonPlatforms, instrumentOptionsByAssetType } from '~/constants/investmentOptions'
 
@@ -153,17 +153,23 @@ const calculatedQuantity = computed(() => {
 
 function handleAmountInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   form.value.amount = parsed
-  amountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  amountDisplay.value = formatted
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
 }
 
 
 function handleAveragePriceInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   form.value.average_price = parsed > 0 ? parsed : undefined
-  averagePriceDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  averagePriceDisplay.value = parsed > 0 ? formatted : ''
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
 }
 
 const allocationItems = computed(() => [
@@ -218,6 +224,40 @@ const canProceedStep1 = computed(() => {
 })
 
 const isFromAllocation = computed(() => !!props.allocationContext)
+
+const referenceAmount = computed(() => {
+  return props.allocationContext?.source_amount || 0
+})
+
+const extractAmountValues = computed(() => {
+  const refAmount = referenceAmount.value
+  return {
+    p25: refAmount > 0 ? Math.floor(refAmount * 0.25) : 0,
+    p50: refAmount > 0 ? Math.floor(refAmount * 0.5) : 0,
+    p100: refAmount > 0 ? Math.floor(refAmount * 1) : 0
+  }
+})
+
+const activeExtractPercentage = computed<number | null>(() => {
+  if (!isFromAllocation.value) return null
+  const { p25, p50, p100 } = extractAmountValues.value
+  const amount = form.value.amount
+  if (amount === p25) return 0.25
+  if (amount === p50) return 0.5
+  if (amount === p100) return 1
+  return null
+})
+
+function getExtractBtnColor(percentage: number) {
+  return activeExtractPercentage.value === percentage ? 'primary' : 'grey'
+}
+
+function applyExtractAmount(percentage: number) {
+  if (!referenceAmount.value || referenceAmount.value <= 0) return
+  const nextAmount = Math.floor(referenceAmount.value * percentage)
+  form.value.amount = nextAmount
+  amountDisplay.value = nextAmount > 0 ? formatNumberInput(nextAmount) : ''
+}
 
 const canProceedStep2 = computed(() => {
   return form.value.amount > 0 && form.value.average_price && form.value.average_price > 0
@@ -465,6 +505,7 @@ watch(() => props.modelValue, (newVal) => {
                     inputmode="numeric"
                     :disabled="submitting"
                     @input="handleAmountInput"
+                    hide-details
                   >
                     <template v-slot:append-inner>
                       <VMenu location="top" :close-on-content-click="false">
@@ -483,6 +524,43 @@ watch(() => props.modelValue, (newVal) => {
                       </VMenu>
                     </template>
                   </VTextField>
+
+                  <div v-if="isFromAllocation" class="d-flex ga-2 mt-2">
+                    <VBtn
+                      size="x-small"
+                      variant="tonal"
+                      class="text-none"
+                      :color="getExtractBtnColor(0.25)"
+                      :disabled="submitting || referenceAmount <= 0"
+                      @click="applyExtractAmount(0.25)"
+                    >
+                      25%
+                    </VBtn>
+                    <VBtn
+                      size="x-small"
+                      variant="tonal"
+                      class="text-none"
+                      :color="getExtractBtnColor(0.5)"
+                      :disabled="submitting || referenceAmount <= 0"
+                      @click="applyExtractAmount(0.5)"
+                    >
+                      50%
+                    </VBtn>
+                    <VBtn
+                      size="x-small"
+                      variant="tonal"
+                      class="text-none"
+                      :color="getExtractBtnColor(1)"
+                      :disabled="submitting || referenceAmount <= 0"
+                      @click="applyExtractAmount(1)"
+                    >
+                      100%
+                    </VBtn>
+                    <VSpacer />
+                    <div class="text-caption text-medium-emphasis">
+                      Ref: {{ formatCurrency(referenceAmount) }}
+                    </div>
+                  </div>
                 </VCol>
 
                 <VCol cols="12" md="6">

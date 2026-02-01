@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatCurrency, formatNumberInput, parseNumberInput } from '~/utils/format'
+import { formatCurrency, formatNumberInput, formatNumberInputWithCaret, parseNumberInput } from '~/utils/format'
 import type { Holding } from '~/types/models'
 
 const props = defineProps<{
@@ -72,9 +72,12 @@ function handlePurchasePriceInput(index: number, event: Event) {
   const item = simulationData.value[index]
   if (!item) return
   
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   item.purchasePrice = parsed
-  item.purchasePriceDisplay = parsed > 0 ? formatNumberInput(parsed) : ''
+  item.purchasePriceDisplay = formatted
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
   calculateValues(index)
 }
 
@@ -83,9 +86,12 @@ function handleCurrentPriceInput(index: number, event: Event) {
   const item = simulationData.value[index]
   if (!item) return
   
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   item.currentPrice = parsed
-  item.currentPriceDisplay = parsed > 0 ? formatNumberInput(parsed) : ''
+  item.currentPriceDisplay = formatted
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
   calculateValues(index)
 }
 

@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
   const allocationRows = await db`
     INSERT INTO public.allocations (id, money_book_id, source_amount, date, notes)
     VALUES (uuid_generate_v4()::TEXT, ${money_book_id}, ${source_amount}, ${date}, ${notes || null})
-    RETURNING id, money_book_id, source_amount, date, notes, created_at
+    RETURNING id, money_book_id, source_amount::bigint as source_amount, date, notes, created_at
   `
   
   const allocation = allocationRows[0]
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
       VALUES 
         (uuid_generate_v4()::TEXT, ${item.allocation_id}, ${item.pocket_id}, 
          ${item.pocket_name}, ${item.pocket_percentage}, ${item.amount})
-      RETURNING id, allocation_id, pocket_id, pocket_name, pocket_percentage, amount, created_at
+      RETURNING id, allocation_id, pocket_id, pocket_name, pocket_percentage, amount::bigint as amount, created_at
     `
     allocationItems.push(itemRows[0])
   }

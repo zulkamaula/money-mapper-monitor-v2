@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
       purchase_date = COALESCE(${purchase_date !== undefined ? purchase_date : null}, purchase_date),
       notes = COALESCE(${notes !== undefined ? notes : null}, notes)
     WHERE id = ${transactionId}
-    RETURNING *
+    RETURNING *, amount::bigint as amount, average_price::bigint as average_price
   `
 
   if (!updated[0]) {
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   const aggregates = await db`
     SELECT 
       COUNT(*) as transaction_count,
-      SUM(amount) as total_investment,
+      SUM(amount)::bigint as total_investment,
       SUM(quantity) as total_quantity
     FROM public.holding_transactions
     WHERE holding_id = ${holdingId}

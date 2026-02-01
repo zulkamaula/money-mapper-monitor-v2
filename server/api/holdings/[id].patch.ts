@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
       last_updated = NOW()
     WHERE id = ${holdingId}
     RETURNING id, asset_id, platform, instrument_name,
-              total_investment, total_quantity, transaction_count,
+              total_investment::bigint as total_investment, total_quantity, transaction_count,
               last_updated, created_at
   `
   

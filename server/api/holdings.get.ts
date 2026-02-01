@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
       a.name as asset_name,
       h.platform,
       h.instrument_name,
-      h.total_investment,
+      h.total_investment::bigint as total_investment,
       h.total_quantity,
       h.transaction_count,
       h.last_updated,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumberInput, parseNumberInput, formatCurrency, formatQuantity, formatDateInput, formatDate } from '~/utils/format'
+import { formatNumberInput, formatNumberInputWithCaret, parseNumberInput, formatCurrency, formatQuantity, formatDateInput, formatDate } from '~/utils/format'
 import type { HoldingTransaction, Holding } from '~/types/models'
 
 const props = defineProps<{
@@ -66,16 +66,22 @@ const allocationHint = computed(() => {
 
 function handleAmountInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   form.value.amount = parsed
-  amountDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  amountDisplay.value = formatted
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
 }
 
 function handleAveragePriceInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const parsed = parseNumberInput(input.value)
+  const { parsed, formatted, caret } = formatNumberInputWithCaret(input.value, input.selectionStart ?? input.value.length)
   form.value.average_price = parsed > 0 ? parsed : 0
-  averagePriceDisplay.value = parsed > 0 ? formatNumberInput(parsed) : ''
+  averagePriceDisplay.value = parsed > 0 ? formatted : ''
+  nextTick(() => {
+    input.setSelectionRange(caret, caret)
+  })
 }
 
 function nextStep() {

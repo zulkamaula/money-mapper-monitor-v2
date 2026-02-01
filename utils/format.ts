@@ -99,39 +99,55 @@ export function formatNumberInput(value: number | string): string {
   return new Intl.NumberFormat('id-ID').format(num)
 }
 
+export function formatNumberInputWithCaret(value: string, caretPosition: number) {
+  const safeCaret = Math.max(0, Math.min(caretPosition, value.length))
+  const left = value.slice(0, safeCaret)
+  const digitsLeft = (left.match(/\d/g) || []).length
+
+  const parsed = parseNumberInput(value)
+  const formatted = parsed > 0 ? formatNumberInput(parsed) : ''
+
+  if (!formatted) {
+    return { parsed, formatted: '', caret: 0 }
+  }
+
+  if (digitsLeft <= 0) {
+    return { parsed, formatted, caret: 0 }
+  }
+
+  let digitCount = 0
+  let nextCaret = formatted.length
+  for (let i = 0; i < formatted.length; i++) {
+    if (/\d/.test(formatted[i] || '')) {
+      digitCount++
+      if (digitCount >= digitsLeft) {
+        nextCaret = i + 1
+        break
+      }
+    }
+  }
+
+  return { parsed, formatted, caret: nextCaret }
+}
+
 /**
  * Parse formatted number input back to number
  * Removes thousand separators and converts to number
- * Handles both formats:
- * - Indonesian format: dots for thousands, comma for decimals
- * - English format: period for decimals (from database)
+ * Handles Indonesian user input format:
+ * - dots for thousands, comma for decimals
  * Examples:
  * - "1.000" → 1000
  * - "1.000.000" → 1000000
  * - "Rp 3.000.200,00" → 3000200
- * - "3000200.00" → 3000200 (database format)
  */
 export function parseNumberInput(value: string): number {
   // Remove currency symbols and whitespace
   let cleaned = value.replace(/Rp/gi, '').trim()
 
-  // ✅ FIX: Remove decimal part (both comma AND period)
-  // This must happen BEFORE removing dots (thousand separators)
-  // to prevent trailing zeros from being concatenated
-  
-  // Check if there's a decimal separator (comma or period)
-  // If last occurrence has 2 digits after it, it's likely decimal
-  const lastCommaIndex = cleaned.lastIndexOf(',')
-  const lastPeriodIndex = cleaned.lastIndexOf('.')
-  
   // Remove decimal part after comma (Indonesian format: "1.000,00")
+  const lastCommaIndex = cleaned.lastIndexOf(',')
   if (lastCommaIndex !== -1) {
     cleaned = cleaned.substring(0, lastCommaIndex)
-  }
-  // Remove decimal part after period (English/DB format: "1000000.00")
-  // Only if period is at the end with 1-2 digits after it (decimal, not thousand separator)
-  else if (lastPeriodIndex !== -1 && cleaned.length - lastPeriodIndex <= 3) {
-    cleaned = cleaned.substring(0, lastPeriodIndex)
   }
 
   // Remove thousand separators (dots)

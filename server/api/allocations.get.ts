@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     SELECT 
       a.id, 
       a.money_book_id, 
-      a.source_amount, 
+      a.source_amount::bigint as source_amount, 
       a.date, 
       a.notes, 
       a.created_at,
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
           'pocket_id', ai.pocket_id,
           'pocket_name', ai.pocket_name,
           'pocket_percentage', ai.pocket_percentage,
-          'amount', ai.amount,
+          'amount', ai.amount::bigint,
           'created_at', ai.created_at
         ) ORDER BY jsonb_build_object(
           'id', ai.id,
@@ -49,19 +49,19 @@ export default defineEventHandler(async (event) => {
           'pocket_id', ai.pocket_id,
           'pocket_name', ai.pocket_name,
           'pocket_percentage', ai.pocket_percentage,
-          'amount', ai.amount,
+          'amount', ai.amount::bigint,
           'created_at', ai.created_at
         )
       ) FILTER (WHERE ai.id IS NOT NULL) as allocation_items,
       COALESCE(ht_summary.transaction_count, 0)::int as transaction_count,
-      COALESCE(ht_summary.total_allocated, 0)::numeric as total_allocated
+      COALESCE(ht_summary.total_allocated, 0)::bigint as total_allocated
     FROM public.allocations a
     LEFT JOIN public.allocation_items ai ON ai.allocation_id = a.id
     LEFT JOIN (
       SELECT 
         linked_allocation_id as allocation_id,
         COUNT(*)::int as transaction_count,
-        COALESCE(SUM(amount), 0)::numeric as total_allocated
+        COALESCE(SUM(amount), 0)::bigint as total_allocated
       FROM public.holding_transactions
       WHERE linked_allocation_id IS NOT NULL
       GROUP BY linked_allocation_id

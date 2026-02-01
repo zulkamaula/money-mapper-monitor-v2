@@ -199,7 +199,7 @@ export default defineEventHandler(async (event) => {
   const updatedHolding = await db`
     SELECT 
       h.id, h.asset_id, h.platform, h.instrument_name,
-      h.total_investment, h.total_quantity, h.transaction_count,
+      h.total_investment::bigint as total_investment, h.total_quantity, h.transaction_count,
       h.last_updated, h.created_at
     FROM public.holdings h
     WHERE h.id = ${holdingId}

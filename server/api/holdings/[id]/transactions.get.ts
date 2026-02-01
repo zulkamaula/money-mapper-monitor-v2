@@ -31,14 +31,14 @@ export default defineEventHandler(async (event) => {
       ht.id,
       ht.holding_id,
       ht.transaction_type,
-      ht.amount,
+      ht.amount::bigint as amount,
       ht.quantity,
-      ht.average_price,
+      ht.average_price::bigint as average_price,
       ht.purchase_date,
       ht.notes,
       ht.linked_allocation_id,
       ht.created_at,
-      a.source_amount as allocation_source_amount,
+      a.source_amount::bigint as allocation_source_amount,
       a.date as allocation_date,
       a.notes as allocation_notes
     FROM public.holding_transactions ht
